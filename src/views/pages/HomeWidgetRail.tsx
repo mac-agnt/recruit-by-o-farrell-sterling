@@ -1,5 +1,7 @@
 import { Fragment } from "react";
 import { arr, cat, css, txt } from "../../runtime/template";
+import HomeWidgets from "../../recruit/pages/hq/HomeWidgets";
+import { WithNav } from "../../recruit/RecruitRouter";
 
 type Props = { v: any };
 
@@ -63,6 +65,7 @@ export default function HomeWidgetRail({ v }: Props) {
             {txt(v.widgetEditLabel)}
           </button>
         </div>
+        <WithNav v={v}><HomeWidgets /></WithNav>
         {v.widgetEdit && (
           <>
             <div style={{"padding":"14px 16px","background":"var(--surface)","border":"1px dashed var(--border-strong)","borderRadius":"var(--card-r,18px)","animation":"expandIn .28s var(--ease) both"}}>
@@ -225,7 +228,7 @@ export default function HomeWidgetRail({ v }: Props) {
             <div style={{"background":"var(--surface)","border":"1px solid var(--border)","borderRadius":"var(--card-r,18px)","backdropFilter":"blur(20px) saturate(1.3)","boxShadow":"var(--card-shadow)","transition":"transform .28s var(--ease),border-color .24s var(--ease),box-shadow .28s var(--ease)","padding":"20px 22px 10px"}}>
               <div style={{"display":"flex","alignItems":"center","gap":"10px"}}>
                 <div style={{"flex":"1","fontSize":"13.5px","fontWeight":"500"}}>
-                  {"Site visits this week"}
+                  {"Hiring this week"}
                 </div>
                 {v.widgetEdit && (
                   <>
@@ -240,7 +243,7 @@ export default function HomeWidgetRail({ v }: Props) {
               <div style={{"marginTop":"6px"}}>
                 {arr(v.visitWidget).map((v: any, i21: number) => (
                   <Fragment key={i21}>
-                    <div style={{"display":"flex","alignItems":"center","gap":"11px","padding":"11px 0","borderTop":"1px solid var(--border)"}}>
+                    <div onClick={v?.open} style={{"display":"flex","alignItems":"center","gap":"11px","padding":"11px 0","borderTop":"1px solid var(--border)","cursor":"pointer"}}>
                       <span style={css(cat("width:7px;height:7px;border-radius:2px;flex:none;background:", v?.dot))} />
                       <span style={{"flex":"1","minWidth":"0","fontSize":"12.5px","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
                         {txt(v?.title)}
@@ -279,7 +282,7 @@ export default function HomeWidgetRail({ v }: Props) {
               <div style={{"marginTop":"14px"}}>
                 {arr(v.activity).map((a: any, i22: number) => (
                   <Fragment key={i22}>
-                    <div style={{"display":"flex","gap":"11px","paddingBottom":"14px"}}>
+                    <div onClick={a?.open} style={{"display":"flex","gap":"11px","paddingBottom":"14px","cursor":"pointer"}}>
                       <span style={css(cat("width:6px;height:6px;border-radius:2px;flex:none;margin-top:6px;background:", a?.dot))} />
                       <div style={{"minWidth":"0","flex":"1"}}>
                         <div style={{"fontSize":"12.5px","lineHeight":"1.5","color":"var(--body)"}}>

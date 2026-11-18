@@ -50,7 +50,7 @@ export default function Dashboard({ v }: Props) {
                 </button>
               </div>
               <div style={{"fontSize":"12.5px","color":"var(--dim)","marginTop":"6px"}}>
-                {"Type anything about the business as a filter — a region, a project, a customer segment — and Pulse builds a live metric set for it. Pick a registered dimension below, or name your own."}
+                {"Type anything about the marketplace as a filter, such as a region, a segment or a campaign, and Recruit builds a metric set for it from demo data. Pick a registered dimension below, or name your own."}
               </div>
               {arr(v.filterGroups).map((g: any, i91: number) => (
                 <Fragment key={i91}>
@@ -71,7 +71,7 @@ export default function Dashboard({ v }: Props) {
                 </Fragment>
               ))}
               <div style={{"display":"flex","gap":"8px","marginTop":"18px"}}>
-                <input value={v.customFilter ?? ""} onChange={v.setCustomFilter} onKeyDown={v.onCustomFilterKey} placeholder="e.g. Scotland expansion, or Late supplier deliveries" style={{"flex":"1","minWidth":"0","height":"36px","padding":"0 15px","background":"var(--surface-2)","border":"1px solid var(--border)","borderRadius":"var(--r-md,13px)","outline":"0","fontSize":"13px"}} />
+                <input value={v.customFilter ?? ""} onChange={v.setCustomFilter} onKeyDown={v.onCustomFilterKey} placeholder="e.g. Galway hotels, or Career change week" style={{"flex":"1","minWidth":"0","height":"36px","padding":"0 15px","background":"var(--surface-2)","border":"1px solid var(--border)","borderRadius":"var(--r-md,13px)","outline":"0","fontSize":"13px"}} />
                 <button className={cx("ixp", "ixq")} onClick={v.addCustomFilter} style={{"height":"36px","padding":"0 17px","border":"0","borderRadius":"var(--cta-r,9px)","background":"var(--accent-fill,var(--accent))","color":"var(--on-accent)","boxShadow":"var(--accent-glow,none)","fontSize":"13px","fontWeight":"500","cursor":"pointer","transition":"background .2s var(--ease),transform .18s var(--ease)"}}>
                   {"Build dashboard"}
                 </button>

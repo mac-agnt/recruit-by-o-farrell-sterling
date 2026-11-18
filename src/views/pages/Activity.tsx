@@ -1,6 +1,5 @@
 import { Fragment } from "react";
 import { arr, cat, css, txt } from "../../runtime/template";
-import AgentFace from "../../components/AgentFace";
 
 type Props = { v: any };
 
@@ -27,7 +26,7 @@ export default function Activity({ v }: Props) {
               </svg>
               {txt(v.act?.pauseLabel)}
             </button>
-            <button className="ix10" style={{"height":"36px","display":"flex","alignItems":"center","gap":"8px","padding":"0 15px","background":"var(--chip)","border":"1px solid var(--chip-border)","borderRadius":"var(--r-ctl,9px)","fontSize":"13px","color":"var(--body)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
+            <button className="ix10" onClick={v.act?.exportLog} style={{"height":"36px","display":"flex","alignItems":"center","gap":"8px","padding":"0 15px","background":"var(--chip)","border":"1px solid var(--chip-border)","borderRadius":"var(--r-ctl,9px)","fontSize":"13px","color":"var(--body)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 3.5v11 M7.5 10 12 14.5 16.5 10 M4.5 19.5h15" />
               </svg>
@@ -35,10 +34,10 @@ export default function Activity({ v }: Props) {
             </button>
           </div>
         </div>
-        {v.act?.agentLens && (
+        {v.act?.isFocus && (
           <>
             <div style={{"display":"grid","gridTemplateColumns":"repeat(4,minmax(0,1fr))","gap":"12px"}}>
-              {arr(v.act?.agentKpis).map((k: any, i57: number) => (
+              {arr(v.act?.focusKpis).map((k: any, i57: number) => (
                 <Fragment key={i57}>
                   <div style={css(k?.style)}>
                     <div style={{"display":"flex","alignItems":"center","gap":"8px"}}>
@@ -50,153 +49,7 @@ export default function Activity({ v }: Props) {
                     <div style={css(cat("font-family:var(--mono);font-size:28px;font-weight:var(--fig-weight,inherit);letter-spacing:-1px;margin-top:10px;color:", k?.valueColor))}>
                       {txt(k?.value)}
                     </div>
-                    <div style={{"fontSize":"11.5px","color":"var(--faint)","marginTop":"6px"}}>
-                      {txt(k?.hint)}
-                    </div>
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-            <div style={{"display":"flex","alignItems":"center","gap":"10px","marginTop":"22px","padding":"0 4px"}}>
-              <span style={{"fontFamily":"var(--mono)","fontSize":"9.5px","letterSpacing":"0.14em","color":"var(--faint)"}}>
-                {"THE ROSTER"}
-              </span>
-              <span style={{"flex":"1","height":"1px","background":"var(--border)"}} />
-            </div>
-            <div style={{"display":"grid","gridTemplateColumns":"repeat(auto-fill,minmax(300px,1fr))","gap":"9px","marginTop":"11px"}}>
-              {arr(v.act?.roster).map((a: any, i58: number) => (
-                <Fragment key={i58}>
-                  <button className="ixr" onClick={a?.go} style={css(a?.style)}>
-                    <div style={{"display":"flex","alignItems":"center","gap":"11px","width":"100%","minWidth":"0"}}>
-                      <AgentFace shape={a?.shape} state={a?.state} tint={a?.tint} size={"34"} />
-                      <span style={{"flex":"1","minWidth":"0","display":"block"}}>
-                        <span style={{"display":"flex","alignItems":"center","gap":"7px","minWidth":"0"}}>
-                          <span style={{"flex":"none","fontSize":"13.5px","fontWeight":"600","letterSpacing":"-.15px","color":"var(--ink)"}}>
-                            {txt(a?.name)}
-                          </span>
-                          <span style={css(a?.dotStyle)} />
-                          <span style={css(a?.stateStyle)}>
-                            {txt(a?.stateLabel)}
-                          </span>
-                        </span>
-                        <span style={{"display":"block","fontSize":"11.5px","color":"var(--dim)","marginTop":"3px","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
-                          {txt(a?.preview)}
-                        </span>
-                      </span>
-                      <span style={{"flex":"none","textAlign":"right"}}>
-                        <span style={{"display":"block","fontFamily":"var(--mono)","fontSize":"17px","fontWeight":"var(--fig-weight,inherit)","letterSpacing":"-.5px","color":"var(--ink)"}}>
-                          {txt(a?.actions)}
-                        </span>
-                        <span style={{"display":"block","fontFamily":"var(--mono)","fontSize":"8.5px","letterSpacing":"0.1em","color":"var(--faint)","marginTop":"1px"}}>
-                          {"ACTIONS"}
-                        </span>
-                      </span>
-                    </div>
-                    <div style={{"width":"100%","height":"2px","borderRadius":"2px","background":"var(--track)","overflow":"hidden"}}>
-                      <div style={css(a?.barStyle)} />
-                    </div>
-                  </button>
-                </Fragment>
-              ))}
-            </div>
-          </>
-        )}
-        {v.act?.peopleLens && (
-          <>
-            <div style={{"display":"grid","gridTemplateColumns":"repeat(4,minmax(0,1fr))","gap":"12px"}}>
-              {arr(v.act?.peopleKpis).map((k: any, i59: number) => (
-                <Fragment key={i59}>
-                  <div style={css(k?.style)}>
-                    <div style={{"display":"flex","alignItems":"center","gap":"8px"}}>
-                      <span style={css(cat("width:7px;height:7px;border-radius:2px;background:", k?.dot))} />
-                      <span style={{"flex":"1","minWidth":"0","fontSize":"12.5px","color":"var(--dim)","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
-                        {txt(k?.label)}
-                      </span>
-                    </div>
-                    <div style={css(cat("font-family:var(--mono);font-size:28px;font-weight:var(--fig-weight,inherit);letter-spacing:-1px;margin-top:10px;color:", k?.valueColor))}>
-                      {txt(k?.value)}
-                    </div>
-                    <div style={{"fontSize":"11.5px","color":"var(--faint)","marginTop":"6px"}}>
-                      {txt(k?.hint)}
-                    </div>
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-            <div style={{"display":"flex","alignItems":"center","gap":"10px","marginTop":"22px","padding":"0 4px"}}>
-              <span style={{"fontFamily":"var(--mono)","fontSize":"9.5px","letterSpacing":"0.14em","color":"var(--faint)"}}>
-                {"THE TEAM TODAY"}
-              </span>
-              <span style={{"flex":"1","height":"1px","background":"var(--border)"}} />
-            </div>
-            <div style={{"display":"grid","gridTemplateColumns":"repeat(auto-fill,minmax(300px,1fr))","gap":"9px","marginTop":"11px"}}>
-              {arr(v.act?.peopleRoster).map((p: any, i60: number) => (
-                <Fragment key={i60}>
-                  <button className="ixr" onClick={p?.go} style={css(p?.style)}>
-                    <div style={{"display":"flex","alignItems":"center","gap":"11px","width":"100%","minWidth":"0"}}>
-                      <span style={css(p?.avatarStyle)}>
-                        {txt(p?.initials)}
-                      </span>
-                      <span style={{"flex":"1","minWidth":"0","display":"block"}}>
-                        <span style={{"display":"flex","alignItems":"center","gap":"7px","minWidth":"0"}}>
-                          <span style={{"flex":"none","fontSize":"13.5px","fontWeight":"600","letterSpacing":"-.15px","color":"var(--ink)"}}>
-                            {txt(p?.name)}
-                          </span>
-                          <span style={css(p?.dotStyle)} />
-                          <span style={css(p?.stateStyle)}>
-                            {txt(p?.stateLabel)}
-                          </span>
-                        </span>
-                        <span style={{"display":"block","fontSize":"11.5px","color":"var(--dim)","marginTop":"3px","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
-                          {txt(p?.role)}
-                        </span>
-                      </span>
-                      <span style={{"flex":"none","textAlign":"right"}}>
-                        <span style={{"display":"block","fontFamily":"var(--mono)","fontSize":"17px","fontWeight":"var(--fig-weight,inherit)","letterSpacing":"-.5px","color":"var(--ink)"}}>
-                          {txt(p?.actions)}
-                        </span>
-                        <span style={{"display":"block","fontFamily":"var(--mono)","fontSize":"8.5px","letterSpacing":"0.1em","color":"var(--faint)","marginTop":"1px"}}>
-                          {"ACTIONS"}
-                        </span>
-                      </span>
-                    </div>
-                    <div style={{"display":"flex","alignItems":"center","gap":"8px","width":"100%","minWidth":"0"}}>
-                      <span style={{"flex":"1","minWidth":"0","fontSize":"11.5px","color":"var(--faint)","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
-                        {txt(p?.preview)}
-                      </span>
-                      {p?.waiting && (
-                        <>
-                          <span style={{"flex":"none","padding":"2px 8px","borderRadius":"var(--chip-r,7px)","background":"var(--warn-soft)","color":"var(--warn)","fontSize":"10px","whiteSpace":"nowrap"}}>
-                            {txt(p?.waitLabel)}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <div style={{"width":"100%","height":"2px","borderRadius":"2px","background":"var(--track)","overflow":"hidden"}}>
-                      <div style={css(p?.barStyle)} />
-                    </div>
-                  </button>
-                </Fragment>
-              ))}
-            </div>
-          </>
-        )}
-        {v.act?.attentionLens && (
-          <>
-            <div style={{"display":"grid","gridTemplateColumns":"repeat(4,minmax(0,1fr))","gap":"12px"}}>
-              {arr(v.act?.attentionKpis).map((k: any, i61: number) => (
-                <Fragment key={i61}>
-                  <div style={css(k?.style)}>
-                    <div style={{"display":"flex","alignItems":"center","gap":"8px"}}>
-                      <span style={css(cat("width:7px;height:7px;border-radius:2px;background:", k?.dot))} />
-                      <span style={{"flex":"1","minWidth":"0","fontSize":"12.5px","color":"var(--dim)","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
-                        {txt(k?.label)}
-                      </span>
-                    </div>
-                    <div style={css(cat("font-family:var(--mono);font-size:28px;font-weight:var(--fig-weight,inherit);letter-spacing:-1px;margin-top:10px;color:", k?.valueColor))}>
-                      {txt(k?.value)}
-                    </div>
-                    <div style={{"fontSize":"11.5px","color":"var(--faint)","marginTop":"6px"}}>
+                    <div style={{"fontSize":"11.5px","color":"var(--faint)","marginTop":"6px","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
                       {txt(k?.hint)}
                     </div>
                   </div>
@@ -243,7 +96,7 @@ export default function Activity({ v }: Props) {
                                 {txt(r?.why)}
                               </div>
                               <div style={{"display":"flex","alignItems":"center","gap":"9px","flexWrap":"wrap","marginTop":"2px"}}>
-                                <button className="ixb" onClick={r?.open} style={css(r?.primaryStyle)}>
+                                <button className="ixb" onClick={r?.go} style={css(r?.primaryStyle)}>
                                   {txt(r?.primary)}
                                 </button>
                                 <button className="ix10" onClick={r?.open} style={{"flex":"none","height":"30px","padding":"0 13px","background":"var(--chip)","border":"1px solid var(--chip-border)","borderRadius":"var(--r-ctl,10px)","fontSize":"12.5px","color":"var(--body)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
@@ -267,21 +120,9 @@ export default function Activity({ v }: Props) {
                 )}
               </Fragment>
             ))}
-            {v.act?.triageEmpty && (
-              <>
-                <div style={{"marginTop":"14px","padding":"44px 18px","textAlign":"center","background":"var(--surface)","border":"1px solid var(--border)","borderRadius":"var(--card-r,18px)"}}>
-                  <div style={{"fontSize":"15px","fontWeight":"600"}}>
-                    {"Nothing needs you"}
-                  </div>
-                  <div style={{"fontSize":"12.5px","color":"var(--faint)","marginTop":"6px"}}>
-                    {"No failures and no decisions parked. The audit trail below still has everything."}
-                  </div>
-                </div>
-              </>
-            )}
           </>
         )}
-        {v.act?.genericLens && (
+        {v.act?.isAll && (
           <>
             <div style={{"display":"grid","gridTemplateColumns":"repeat(4,1fr)","gap":"12px"}}>
               {arr(v.act?.kpis).map((k: any, i64: number) => (

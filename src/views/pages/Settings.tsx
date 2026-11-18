@@ -7,29 +7,29 @@ type Props = { v: any };
 export default function Settings({ v }: Props) {
   return (
     <>
-      <div style={{"maxWidth":"1364px","padding":"0 22px 38px","animation":"pageIn .7s var(--ease) both"}}>
-        <div style={{"display":"flex","alignItems":"flex-end","gap":"18px","flexWrap":"wrap","padding":"20px 4px 20px"}}>
+      <div style={{"maxWidth":"1364px","padding":"0 22px 18px","animation":"pageIn .7s var(--ease) both"}}>
+        <div style={{"display":"flex","alignItems":"flex-end","gap":"18px","flexWrap":"wrap","padding":"18px 4px 16px"}}>
           <div style={{"flex":"1","minWidth":"280px"}}>
             <div style={{"fontFamily":"var(--mono)","fontSize":"9.5px","letterSpacing":"0.16em","color":"var(--faint)"}}>
-              {"ADMIN"}
+              {"RECRUIT HQ"}
             </div>
-            <h1 style={{"margin":"8px 0 0","fontSize":"38px","fontWeight":"500","letterSpacing":"-1.5px","lineHeight":"1"}}>
+            <h1 style={{"margin":"8px 0 0","fontSize":"32px","fontWeight":"500","letterSpacing":"-1.2px","lineHeight":"1"}}>
               {"Settings"}
             </h1>
             <div style={{"fontSize":"14px","color":"var(--dim)","marginTop":"9px"}}>
-              {"How Pulse is set up for "}
+              {"How Recruit HQ is set up for "}
               {txt(v.admin?.company)}
-              {" — people, permissions, systems and governance."}
+              {": people, pricing, integrations and governance."}
             </div>
           </div>
-          <button className="ix10" style={{"flex":"none","height":"36px","display":"flex","alignItems":"center","gap":"8px","padding":"0 15px","background":"var(--chip)","border":"1px solid var(--chip-border)","borderRadius":"var(--r-ctl,13px)","fontSize":"13px","color":"var(--body)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
+          <button className="ix10" onClick={v.admin?.openHistory} style={{"flex":"none","height":"36px","display":"flex","alignItems":"center","gap":"8px","padding":"0 15px","background":"var(--chip)","border":"1px solid var(--chip-border)","borderRadius":"var(--r-ctl,13px)","fontSize":"13px","color":"var(--body)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 8v4l3 1.8" />
             </svg>
             {"Change history"}
           </button>
         </div>
-        <div style={{"display":"flex","flexWrap":"wrap","gap":"8px","padding":"0 4px 24px"}}>
+        <div style={{"display":"flex","flexWrap":"wrap","gap":"8px","padding":"0 4px 18px"}}>
           {arr(v.admin?.urgent).map((u: any, i73: number) => (
             <Fragment key={i73}>
               <button className="ixg" onClick={u?.go} style={css(cat("display:flex;align-items:center;gap:10px;height:38px;padding:0 15px;background:var(--chip);border:1px solid ", u?.border, ";border-radius:var(--r-ctl,13px);font-size:13px;color:var(--body);cursor:pointer;transition:border-color .2s var(--ease),transform .18s var(--ease)"))}>
@@ -84,7 +84,7 @@ export default function Settings({ v }: Props) {
               </Fragment>
             ))}
           </div>
-          <div style={{"background":"var(--surface)","border":"1px solid var(--border)","borderRadius":"var(--card-r,18px)","backdropFilter":"blur(20px)","boxShadow":"var(--card-shadow)","overflow":"hidden","minHeight":"560px"}}>
+          <div style={{"background":"var(--surface)","border":"1px solid var(--border)","borderRadius":"var(--card-r,18px)","backdropFilter":"blur(20px)","boxShadow":"var(--card-shadow)","overflow":"hidden","minHeight":"220px"}}>
             <div style={css(v.admin?.panelAnim)}>
               <div style={{"display":"flex","alignItems":"flex-start","gap":"12px","padding":"22px 24px 18px","borderBottom":"1px solid var(--border)"}}>
                 <span style={css(cat("width:34px;height:34px;flex:none;border-radius:var(--r-md,12px);background:var(--chip);border:1px solid var(--chip-border);color:", v.admin?.panel?.tint, ";display:flex;align-items:center;justify-content:center"))}>
@@ -98,6 +98,9 @@ export default function Settings({ v }: Props) {
                   </div>
                   <div style={{"fontSize":"20px","fontWeight":"500","letterSpacing":"-.5px","marginTop":"6px"}}>
                     {txt(v.admin?.panel?.title)}
+                  </div>
+                  <div style={{"fontSize":"12.5px","color":"var(--dim)","marginTop":"6px","lineHeight":"1.5","maxWidth":"70ch","textWrap":"pretty"}}>
+                    {txt(v.admin?.panel?.blurb)}
                   </div>
                 </div>
               </div>
@@ -192,7 +195,7 @@ export default function Settings({ v }: Props) {
                                 ))}
                               </div>
                               <div style={{"display":"flex","alignItems":"center","gap":"10px","marginTop":"14px","paddingTop":"13px","borderTop":"1px solid var(--border)"}}>
-                                <button className="ixz" style={css(it?.actionStyle)}>
+                                <button className="ixz" onClick={it?.act} style={css(it?.actionStyle)}>
                                   {txt(it?.actionLabel)}
                                 </button>
                                 <span style={{"flex":"1","minWidth":"0","fontSize":"11px","color":"var(--faint)","overflow":"hidden","textOverflow":"ellipsis","whiteSpace":"nowrap"}}>
@@ -265,7 +268,7 @@ export default function Settings({ v }: Props) {
                             <div style={{"fontSize":"12px","color":"var(--dim)","lineHeight":"1.5","marginTop":"7px"}}>
                               {txt(is?.fix)}
                             </div>
-                            <button style={{"height":"28px","marginTop":"9px","padding":"0 12px","background":"var(--surface-2)","border":"1px solid var(--border)","borderRadius":"var(--r-ctl,9px)","fontSize":"11.5px","color":"var(--body)","cursor":"pointer"}}>
+                            <button onClick={is?.go} style={{"height":"28px","marginTop":"9px","padding":"0 12px","background":"var(--surface-2)","border":"1px solid var(--border)","borderRadius":"var(--r-ctl,9px)","fontSize":"11.5px","color":"var(--body)","cursor":"pointer"}}>
                               {txt(is?.action)}
                             </button>
                           </div>
@@ -283,7 +286,7 @@ export default function Settings({ v }: Props) {
                       <div style={{"fontSize":"14px","lineHeight":"1.55","color":"var(--ink)","marginTop":"7px"}}>
                         {txt(v.admin?.panel?.heroText)}
                       </div>
-                      <button className="ix15" style={{"height":"34px","marginTop":"13px","padding":"0 15px","border":"1px solid var(--accent)","background":"none","borderRadius":"var(--r-ctl,9px)","fontSize":"13px","color":"var(--accent)","cursor":"pointer","transition":"background .2s var(--ease)"}}>
+                      <button className="ix15" onClick={v.admin?.panel?.heroGo} style={{"height":"34px","marginTop":"13px","padding":"0 15px","border":"1px solid var(--accent)","background":"none","borderRadius":"var(--r-ctl,9px)","fontSize":"13px","color":"var(--accent)","cursor":"pointer","transition":"background .2s var(--ease)"}}>
                         {txt(v.admin?.panel?.heroAction)}
                       </button>
                     </div>

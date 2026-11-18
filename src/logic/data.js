@@ -1,4 +1,46 @@
-/* Demo data and pure helpers for the Pulse prototype (Kilbride Group). */
+/* Demo data and pure helpers for Recruit HQ, the founder's operating layer for
+   the Recruit marketplace (O'Farrell Sterling). Every figure is derived from the
+   shared fixtures in src/recruit/data and describes one illustrative
+   future-state scenario, not actual results. */
+
+import {
+  MARKET, TIERS, SERIES, MONTHS, SCENARIO_CAPTION, CANDIDATE_FUNNEL, CAMPAIGNS, REGION_MIX, QUALITY,
+  membershipRevenue, totalAccounts, placementEconomics,
+  EMPLOYERS, EMPLOYER_BY_ID, VACANCIES, CANDIDATE_BY_ID, PLACEMENTS, PARTNERS, COURSE_BY_ID,
+  RECRUIT_AGENTS, HQ_TEAM, HQ_TEAMS, ORG, INTEGRATIONS_ROADMAP, COMMISSION_RULES, VERIFICATION_QUEUE,
+  PRIVACY_REQUESTS, GOVERNANCE
+} from "../recruit/data";
+import { num, eur, plural } from "../recruit/format";
+
+/* ---- small formatters, so every number below is computed, not typed ---- */
+const MINUS = "−";
+const k1 = (n) => (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+const eurk1 = (n) => "€" + (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+const pctOf = (a, b, d) => (100 * a / b).toFixed(d || 0) + "%";
+const signed = (n) => (n >= 0 ? "+" : MINUS) + num(Math.abs(n));
+const lastDelta = (arr) => arr[arr.length - 1] - arr[arr.length - 2];
+const growth = (arr) => {
+  const a = arr[arr.length - 2], b = arr[arr.length - 1];
+  return (b >= a ? "+" : MINUS) + Math.abs(100 * (b - a) / a).toFixed(1) + "%";
+};
+const bars9 = (arr) => { const t = arr.slice(-9), mx = Math.max.apply(null, t); return t.map(v => +(v / mx).toFixed(3)); };
+const FLAT = [.84, .86, .85, .88, .87, .9, .89, .91, .92];
+const tierLabel = (id) => (TIERS.find(t => t.id === id) || {}).label || "";
+const candName = (id) => (CANDIDATE_BY_ID[id] || {}).name || id;
+const empShort = (id) => (EMPLOYER_BY_ID[id] || {}).short || id;
+const agentById = (id) => RECRUIT_AGENTS.find(a => a.id === id) || {};
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/* The marketplace series, named once. */
+const REG = SERIES.registered, VER = SERIES.verified, DISC = SERIES.discoverable, EMP = SERIES.employers,
+  VAC = SERIES.vacancies, PLC = SERIES.placements, HRS = SERIES.hoursToShortlist, MRR = SERIES.membershipMrr,
+  FEE = SERIES.successFees, EDU = SERIES.educationRevenue;
+const MEMBERSHIP_ANNUAL = membershipRevenue(TIERS);
+/* From the Verification Agent's queue: the backlog older than the 5-day target. */
+const VERIFY_OLD = 210;
+/* From the Ops Watchdog: memberships expiring in the next 30 days. */
+const RENEWALS_30 = 23;
+const AGENT_RUNS_TODAY = RECRUIT_AGENTS.reduce((t, a) => t + a.runsToday, 0);
 
 const INK="var(--ink)", BODY="var(--body)", DIM="var(--dim)", FAINT="var(--faint)";
 const LIME="var(--accent)", GREEN="var(--ok)", AMBER="var(--warn)", RED="var(--bad)", NEUTRAL="var(--neutral)";
@@ -35,170 +77,211 @@ const ICONS = {
   bell:"M6 8.5a6 6 0 0 1 12 0c0 6.5 2.6 8.5 2.6 8.5H3.4S6 15 6 8.5Z M10.3 20.5a1.94 1.94 0 0 0 3.4 0"
 };
 
+
 /* Ontology stays first and is never removed (PulseLogic enforces this too). */
 const REC_SECTIONS = [
-  {id:"ontology", label:"Ontology", blurb:"How every record connects: entities, predicates and the paths between them."},
-  {id:"files", label:"Files", blurb:"Documents, contracts and certificates — indexed where Helios can read them."},
-  {id:"contacts", label:"Contacts", blurb:"Every person the business deals with, staff and external."}
+  {id:"ontology", label:"Ontology", blurb:"How every marketplace record connects: entities, predicates and the paths between them."},
+  {id:"files", label:"Files", blurb:"Pricing drafts, policies, partner proposals and templates. Indexed pages are the ones Recruit Assistant can read."},
+  {id:"contacts", label:"Contacts", blurb:"The HQ team, employer contacts, partners and candidates who agreed to share their details."},
+  {id:"records", label:"Records", blurb:"Every marketplace record by entity: candidates, employers, vacancies, offers, placements and courses."},
+  {id:"relationships", label:"Relationships", blurb:"Follow one record through everything it connects to."}
 ];
 
-const CONTACTS = [
-  ["Aoife Nolan","Accounts manager","aoife@kilbridegroup.ie","Kilbride Group","staff","var(--accent)"],
-  ["Séamus Byrne","Senior installer","seamus@kilbridegroup.ie","Kilbride Group","staff","#9fd6f0"],
-  ["Tom Walsh","Operations lead","tom@kilbridegroup.ie","Kilbride Group","staff","#e6c78a"],
-  ["Niamh Cronin","Trade counter","niamh@kilbridegroup.ie","Kilbride Group","staff","#c8b4f0"],
-  ["Dermot Casey","Buyer","dermot@caseybuilders.ie","Casey Builders","customer","#9fd6f0"],
-  ["Liam Dunne","Owner","liam@dunneandsons.ie","Dunne & Sons Ltd","on stop","#e2a08c"],
-  ["Máire Fitzgerald","Director","maire@fitzheating.ie","Fitzgerald Heating","watch","#e6c78a"],
-  ["Paul Ó Riain","Site foreman","paul@oriain.ie","Ó Riain, Glanmire","customer","#a8e0c0"],
-  ["Cathal Moore","Account manager","cathal@munsterplumbing.ie","Munster Plumbing","supplier","#c8b4f0"]
-];
+/* [name, role, email, organisation, tag, tint, ref]. Candidates appear only
+   once they have accepted an introduction, so their details were shared with
+   consent. Emails use reserved .example domains. */
+const staffEmail = (name) => name.split(" ")[0].toLowerCase() + "@recruit.example";
+const CONSENTED = ["c-sarah", "c-declan", "c-tomas"];
+const CONTACTS = HQ_TEAM.map(p => [p.name, p.role, staffEmail(p.name), "O'Farrell Sterling", "staff", p.tint, null])
+  .concat([
+    ["e-harbourview", "harbourview"], ["e-cedarhouse", "cedarhouse"], ["e-atlantic", "atlanticcrest"], ["e-fenwick", "fenwickvale"],
+    ["e-saltmarsh", "saltmarshbay"], ["e-brightwater", "brightwater"], ["e-alder", "alderoak"]
+  ].map(([id, dom]) => {
+    const e = EMPLOYER_BY_ID[id];
+    const slug = e.contact.toLowerCase().replace(/[^a-z ]/g, "").replace(" ", ".");
+    return [e.contact, e.contactRole, slug + "@" + dom + ".example", e.name, "employer", e.tint, id];
+  }))
+  .concat([
+    ["Partnerships office", "Concept partner, nothing signed", "partners@liffey.example", "Liffey Institute", "partner", "#9fb4ff", "pt-liffey"],
+    ["Admissions office", "Proposed partner, nothing signed", "admissions@leeside.example", "Leeside College", "partner", "#c8b4f0", "pt-leeside"]
+  ])
+  .concat(CONSENTED.map(id => {
+    const c = CANDIDATE_BY_ID[id];
+    return [c.name, c.title, c.email, "Shared with Harbourview", "candidate", c.tint, id];
+  }));
 
+/* Files: [label, kind, ref, tab]. kind is employer | candidate | vacancy |
+   course | partner | agent | page, and the link opens the matching drawer or page. */
 const FILE_TREE = [
-  {type:"folder", id:"f-org", name:"Organisations", depth:0},
-  {type:"file", id:"fl-1", name:"Casey Builders — framework 2026.pdf", depth:1, parent:"f-org", indexed:true,
-   path:"Organisations / Casey Builders", title:"Casey Builders — framework 2026",
-   facts:[["TYPE","PDF · 6 pages"],["ADDED","12 Jan 2026"],["INDEXED","All 6 pages"],["OWNER","Aoife Nolan"]],
-   body:["The framework sets the discount tiers for 2026 and the payment terms Casey Builders trade on. Tier two applies from €40k of annual spend, which they passed in August.",
-     "Pricing is fixed to the June supplier agreement, so a change on the Munster side flows through here rather than being renegotiated separately.",
-     "Termination requires sixty days' notice on either side. Nothing in the document blocks putting the account on stop for non-payment."],
-   links:[["Casey Builders","org"],["Dermot Casey","person"],["PO-4471","order"]]},
-  {type:"file", id:"fl-2", name:"Dunne & Sons — credit application.pdf", depth:1, parent:"f-org", indexed:true,
-   path:"Organisations / Dunne & Sons Ltd", title:"Dunne & Sons — credit application",
-   facts:[["TYPE","PDF · 4 pages"],["ADDED","3 Mar 2011"],["INDEXED","All 4 pages"],["OWNER","Aoife Nolan"]],
-   body:["The original 2011 application, signed by Liam Dunne, setting a €20,000 limit against thirty-day terms.",
-     "Days-to-pay ran at twelve for most of that period and moved to seventy-four after May 2026, which is what put the account on stop.",
-     "The personal guarantee in section four is still in force and has never been called on."],
-   links:[["Dunne & Sons Ltd","org"],["Liam Dunne","person"],["INV-10428","invoice"]]},
-  {type:"folder", id:"f-cert", name:"Certificates", depth:0},
-  {type:"file", id:"fl-3", name:"Séamus Byrne — gas safe 2026.pdf", depth:1, parent:"f-cert", indexed:true,
-   path:"Certificates / Installers", title:"Séamus Byrne — gas safe 2026",
-   facts:[["TYPE","PDF · 2 pages"],["EXPIRES","14 Nov 2026"],["INDEXED","Both pages"],["OWNER","Operations"]],
-   body:["Registration covers domestic boilers and commercial water heaters, valid to 14 November 2026.",
-     "The renewal reminder fires sixty days before expiry. That routine failed twice this week because Mallow yard has no contact on file."],
-   links:[["Séamus Byrne","person"],["Certificate renewal reminder","workflow"]]},
-  {type:"file", id:"fl-4", name:"Public liability — 2026.pdf", depth:1, parent:"f-cert", indexed:false,
-   path:"Certificates / Insurance", title:"Public liability — 2026",
-   facts:[["TYPE","PDF · 12 pages"],["EXPIRES","1 Apr 2027"],["INDEXED","Not indexed"],["OWNER","Operations"]],
-   body:["Cover to €6.5m across all three locations. Not indexed, so Helios cannot answer questions from it yet.",
-     "Indexing it would let the site-visits module check cover before a job is booked at a new address."],
-   links:[["Head office","location"],["Ballincollig depot","location"]]},
-  {type:"folder", id:"f-fin", name:"Finance", depth:0},
-  {type:"file", id:"fl-5", name:"INV-10428.pdf", depth:1, parent:"f-fin", indexed:true,
-   path:"Finance / Invoices", title:"INV-10428",
-   facts:[["TYPE","PDF · 1 page"],["VALUE","€28,410"],["AGE","74 days"],["OWNER","Aoife Nolan"]],
-   body:["The oldest unpaid invoice on the ledger and the reason Dunne & Sons is on stop.",
-     "Two reminders have gone out. The third is drafted and waiting on the finance manager inside the chase workflow."],
-   links:[["Dunne & Sons Ltd","org"],["Chase unpaid invoices","workflow"]]},
-  {type:"file", id:"fl-6", name:"Month-end close — August.xlsx", depth:1, parent:"f-fin", indexed:false,
-   path:"Finance / Close", title:"Month-end close — August",
-   facts:[["TYPE","XLSX · 9 sheets"],["ADDED","1 Sep 2026"],["INDEXED","Not indexed"],["OWNER","Aoife Nolan"]],
-   body:["The working file behind the August close. Cash collected came in at €368k against €358k in July.",
-     "Spreadsheets are stored but not indexed by default — the numbers Helios quotes come from the ledger, not from here."],
-   links:[["Finance","area"],["Month-end close","workflow"]]}
+  {type:"folder", id:"f-com", name:"Commercial", depth:0},
+  {type:"file", id:"fl-1", name:"Membership pricing model (draft).xlsx", depth:1, parent:"f-com", indexed:true,
+   path:"Commercial / Pricing", title:"Membership pricing model (draft)",
+   facts:[["TYPE","XLSX · 4 sheets"],["ADDED","2 Nov 2026"],["INDEXED","All sheets"],["OWNER","John O'Farrell"]],
+   body:["Five membership tiers by employer size. Starter (1-50 employees, €395), Growth (51-100, €595) and Enterprise (501+, about €2,500) came from John. Professional (€995) and Group (€1,495) are concept assumptions still being tested.",
+     "At the current tier mix the model gives " + eur(MEMBERSHIP_ANNUAL) + " a year across " + num(totalAccounts(TIERS)) + " employer accounts, an average of " + eur(MEMBERSHIP_ANNUAL / totalAccounts(TIERS)) + ". This is a simulated, annualised figure for the demo scenario.",
+     "Validation with 20 hotel general managers is in progress. Nothing here is a published price list."],
+   links:[["Membership revenue","page","hq.revenue","memberships"],["Pricing settings","page","Settings","pricing"],["Harbourview Grand Hotel","employer","e-harbourview"]]},
+  {type:"file", id:"fl-2", name:"Success fee terms (draft, not final).pdf", depth:1, parent:"f-com", indexed:true,
+   path:"Commercial / Fees", title:"Success fee terms (draft, not final)",
+   facts:[["TYPE","PDF · 5 pages"],["ADDED","9 Nov 2026"],["INDEXED","All 5 pages"],["OWNER","Michael Tierney"]],
+   body:["Draft terms for the success fee charged when a hire is made through Recruit. The default is 8% of first-year base salary, invoiced on the candidate's start date.",
+     "Two changes are proposed: 7% for employers with six or more placements a year, and 10% for executive placements above €120,000. The executive rate is waiting on John's approval.",
+     "These are not final terms and no employer has signed them. A 25% agency fee is used as the comparison."],
+   links:[["Executive rate approval","page","Work","approvals"],["Commission rules","page","hq.revenue","commissions"],["Cedarhouse Hotels","employer","e-cedarhouse"]]},
+  {type:"folder", id:"f-pol", name:"Policies", depth:0},
+  {type:"file", id:"fl-3", name:"Verification policy v0.3.pdf", depth:1, parent:"f-pol", indexed:true,
+   path:"Policies / Verification", title:"Verification policy v0.3",
+   facts:[["TYPE","PDF · 8 pages"],["ADDED","28 Oct 2026"],["INDEXED","All 8 pages"],["OWNER","Yasmin Haddad"]],
+   body:["How a credential moves from self-reported to verified: the issuer confirms it, a referee confirms it, or the verification team checks the original. Agents organise requests but can never mark a fact as verified.",
+     "The target is to clear every request inside 5 days. " + num(MARKET.verificationBacklog) + " profiles are waiting today and " + VERIFY_OLD + " are older than that, mostly qualifications waiting on issuers.",
+     "Issuer checks in this demo are simulated. No institution is connected."],
+   links:[["Verification queue","page","hq.talent","verification"],["Verification Agent","agent","verify"],["Hospitality Skills Board","partner","pt-skills"]]},
+  {type:"file", id:"fl-4", name:"Candidate privacy notice (draft).pdf", depth:1, parent:"f-pol", indexed:false,
+   path:"Policies / Privacy", title:"Candidate privacy notice (draft)",
+   facts:[["TYPE","PDF · 6 pages"],["ADDED","4 Nov 2026"],["INDEXED","Not indexed"],["OWNER","John O'Farrell"]],
+   body:["Plain-language notice for professionals: what Recruit stores, who can see it, and how to export, correct or delete it. Contact details stay hidden from employers until the candidate accepts an introduction.",
+     "Discoverability is opt-in: discoverable, anonymous or hidden. Candidates can block their current employer, and deletion requests are handled within 30 days.",
+     "Draft for legal review. It is not indexed yet, so Recruit Assistant cannot answer questions from it."],
+   links:[["Consent and privacy settings","page","Settings","governance"]]},
+  {type:"file", id:"fl-5", name:"Recruit Index explained (draft).pdf", depth:1, parent:"f-pol", indexed:true,
+   path:"Policies / Recruit Index", title:"Recruit Index explained (draft)",
+   facts:[["TYPE","PDF · 4 pages"],["ADDED","6 Nov 2026"],["INDEXED","All 4 pages"],["OWNER","Clodagh Reilly"]],
+   body:["The Recruit Index is evidence-based decision support. It is not a credit score and it is not a judgement of a person's worth.",
+     "It weighs five areas of professional evidence: experience, skills, leadership, qualifications and verified evidence. No sensitive characteristics are used.",
+     "It never rejects anyone automatically. Hiring decisions stay with people."],
+   links:[["Talent overview","page","hq.talent","overview"],["Governance settings","page","Settings","governance"]]},
+  {type:"folder", id:"f-par", name:"Partners", depth:0},
+  {type:"file", id:"fl-6", name:"Education partner proposal: Leeside College (unsigned).pdf", depth:1, parent:"f-par", indexed:true,
+   path:"Partners / Proposals", title:"Education partner proposal: Leeside College (unsigned)",
+   facts:[["TYPE","PDF · 7 pages"],["ADDED","17 Nov 2026"],["INDEXED","All 7 pages"],["OWNER","Fergal Nash"]],
+   body:["A student pathways pilot: final-year hospitality students build a Recruit profile before they graduate, and employers see a verified graduate pipeline.",
+     "Drafted by the Growth & Partnerships agent from the Student pathways concept, which converts at 30.4% in the campaign model. The proposed referral share is 8% of course fees from Recruit referrals.",
+     "Leeside College is a fictional demo institution. Nothing is signed and the proposal has not been sent."],
+   links:[["Approve in Work","page","Work","approvals"],["Learning partners","page","hq.learning","institutions"],["Growth & Partnerships","agent","growth"]]},
+  {type:"folder", id:"f-lau", name:"Launch", depth:0},
+  {type:"file", id:"fl-7", name:"Launch plan.pdf", depth:1, parent:"f-lau", indexed:true,
+   path:"Launch / Plan", title:"Launch plan",
+   facts:[["TYPE","PDF · 12 pages"],["ADDED","20 Oct 2026"],["INDEXED","All 12 pages"],["OWNER","John O'Farrell"]],
+   body:["Four phases: Foundation (now to month 3), Pilot (months 4 to 6), Public launch (months 7 to 9) and Scale (months 10 to 24). " + ORG.legalName + " was incorporated in " + ORG.incorporated + ".",
+     "The pilot targets 20 Dublin hotels from John's network and the first 5,000 professional profiles. The scale phase works toward the 100,000 professionals John has set as the target.",
+     "Every marketplace number in this demo is an illustrative future-state scenario, not a result."],
+   links:[["Launch plan","page","Work","launch"],["Growth dashboard","page","Dashboard","growth"]]},
+  {type:"folder", id:"f-tpl", name:"Templates", depth:0},
+  {type:"file", id:"fl-8", name:"Harbourview GM offer letter (sample).docx", depth:1, parent:"f-tpl", indexed:true,
+   path:"Templates / Offers", title:"Harbourview GM offer letter (sample)",
+   facts:[["TYPE","DOCX · 3 pages"],["ADDED","9 Nov 2026"],["INDEXED","All 3 pages"],["OWNER","Owen Brady"]],
+   body:["Sample offer letter built from the General Manager vacancy at Harbourview Grand Hotel: €120,000 base, a performance bonus of up to 15% of base, an 8% employer pension contribution and private healthcare for the family.",
+     "The live offer went to Sarah Kavanagh on 11 November and expires on 25 November. A contingency offer for Declan Murphy at €122,000 is drafted and waiting on Deirdre Foley's approval.",
+     "Kept as a template for employers. Salary figures are illustrative."],
+   links:[["Sarah Kavanagh","candidate","c-sarah"],["General Manager","vacancy","v-hv-gm"],["Harbourview Grand Hotel","employer","e-harbourview"]]}
 ];
 
+/* [label, kind, x, y, big, note]. Not drawn by the current views; kept so
+   the schema reads in Recruit's own terms. */
 const ONTO_NODES = [
-  ["Organisation","entity",500,300,1,"Customers and suppliers. Balances arrive from the ledger through the record spine."],
-  ["Person","entity",300,190,1,"One entity for staff and external contacts, scoped by role rather than split in two."],
-  ["Location","entity",700,190,1,"Multi-branch as a business concept: locations plus the location permission scope."],
-  ["Team","entity",250,430,1,"Teams are records, so the team scope on a grant resolves against them."],
-  ["Task","entity",690,430,1,"Work, whatever it is attached to. Queues are one permission-filtered query."],
-  ["Approval","entity",850,320,0,"A request and its steps. Each decision is written as the person who made it."],
-  ["Invoice","ledger",390,95,0,"Read through the spine — the wholesale ledger stays the source of truth."],
-  ["Order","ledger",620,95,0,"Purchase and sales orders, linked to the organisation that raised them."],
-  ["Visit","module",860,470,0,"Contributed by site-visits, with its own table, predicate and tools."],
-  ["File","entity",140,300,0,"Documents against any record. Indexed pages are what Helios can read."],
-  ["works at","predicate",395,240,0,"Person → Organisation."],
-  ["located at","predicate",605,240,0,"Organisation → Location."],
-  ["member of","predicate",360,370,0,"Person → Team."],
-  ["relates to","predicate",600,370,0,"Task → anything."],
-  ["attached to","predicate",140,372,0,"File → anything."]
+  ["Candidate","entity",500,300,1,"A professional's profile: experience, skills, qualifications and verification."],
+  ["Employer","entity",300,190,1,"A member account: hotels, groups and adjacent-industry employers."],
+  ["Vacancy","entity",700,190,1,"An open role with its requirements, salary range and pipeline."],
+  ["Skill","entity",250,430,0,"A named capability, self-reported or verified."],
+  ["Qualification","entity",140,300,0,"A credential and its issuer. Only a confirmation marks it verified."],
+  ["Offer","entity",850,320,0,"Drafted, approved and sent by the employer. Hidden from the candidate until sent."],
+  ["Placement","ledger",620,95,0,"A completed hire. Generates the success fee."],
+  ["Membership","ledger",390,95,0,"An employer's tier and renewal date."],
+  ["Course","module",690,430,0,"A partner course a candidate can enrol in."],
+  ["Education Partner","module",860,470,0,"A fictional concept partner. Nothing is signed."],
+  ["Verification","entity",360,520,0,"A check sent to an issuer or referee, simulated in this demo."],
+  ["HAS_SKILL","predicate",360,370,0,"Candidate → Skill."],
+  ["MATCHES","predicate",600,245,0,"Candidate → Vacancy, with evidence."],
+  ["POSTS","predicate",500,170,0,"Employer → Vacancy."],
+  ["APPLIES_TO","predicate",610,320,0,"Candidate → Vacancy."],
+  ["SENDS_OFFER","predicate",780,250,0,"Employer → Offer."],
+  ["FILLS","predicate",660,150,0,"Placement → Vacancy."],
+  ["GENERATES","predicate",500,95,0,"Placement → success fee; Membership → revenue."],
+  ["PROVIDES","predicate",780,450,0,"Education Partner → Course."],
+  ["ENROLS_IN","predicate",600,370,0,"Candidate → Course."]
 ];
 
 const ONTO_EDGES = [
-  [500,300,300,190],[500,300,700,190],[500,300,250,430],[500,300,690,430],
-  [500,300,850,320],[500,300,390,95],[500,300,620,95],[500,300,140,300],
-  [300,190,250,430],[700,190,860,470],[690,430,850,320],[690,430,860,470],
-  [300,190,140,300],[390,95,620,95]
+  [500,300,250,430],[500,300,140,300],[500,300,700,190],[300,190,700,190],
+  [700,190,850,320],[300,190,850,320],[620,95,700,190],[390,95,300,190],
+  [500,300,690,430],[860,470,690,430],[500,300,360,520],[360,520,140,300],
+  [620,95,390,95]
 ];
 
 const REC_TEMPLATES = [
-  ["Field sheet","Records","Labelled fields in a grid — the default for a person, organisation or location.",
+  ["Field sheet","Records","Labelled fields in a grid. The default for a candidate, employer or vacancy.",
    "M5 5.5h14v13H5v-13Z M5 10h14 M12 10v8.5","grid"],
   ["Contact card","Records","A portrait, key fields and every linked record in one compact panel.",
    "M12 11.5a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z M5.5 19c.8-3 3.3-4.7 6.5-4.7s5.7 1.7 6.5 4.7","card"],
-  ["Directory","Records","A sortable table of many records at once, built for lists.",
+  ["Directory","Records","A sortable table of many records at once, built for lists of candidates or employers.",
    "M4.5 6.5h15 M4.5 12h15 M4.5 17.5h15 M4.5 6.5h.01 M4.5 12h.01 M4.5 17.5h.01","rows"],
-  ["Timeline","Case work","Ordered events with who did what and when. Good for a case or a claim.",
+  ["Timeline","Case work","Ordered events with who did what and when. Good for a hire from shortlist to start date.",
    "M12 3.5v17 M12 7.5h6 M12 13h-6 M12 18h6","timeline"],
-  ["Kanban board","Case work","Cards in columns by status. For anything that moves through stages.",
+  ["Kanban board","Case work","Cards in columns by stage. For pipelines that move from identified to hired.",
    "M5 5h4.5v14H5V5Z M9.75 5h4.5v9h-4.5V5Z M14.5 5H19v6h-4.5V5Z","kanban"],
-  ["Checklist","Case work","Ticked steps in order, with an owner and a due date on each.",
+  ["Checklist","Case work","Ticked steps in order, with an owner and a due date on each. Good for verification.",
    "M5 6.5h2l1.4 1.4L11 5.5 M5 12.5h2l1.4 1.4 2.6-2.4 M5 18.5h2l1.4 1.4 2.6-2.4 M15 6.5h4 M15 12.5h4 M15 18.5h4","checklist"],
-  ["Ledger","Finance","Rows and running totals. For anything with amounts and dates.",
+  ["Ledger","Finance","Rows and running totals. For memberships, success fees and partner shares.",
    "M4 6h16 M4 12h16 M4 18h16 M9 3.5v17","ledger"],
-  ["Invoice","Finance","Line items, totals and a status — built to be sent, not just stored.",
+  ["Invoice","Finance","Line items, totals and a status. Built to be sent, not just stored.",
    "M7 3.5h10v17H7v-17Z M9.5 8h5 M9.5 11.5h5 M9.5 15h3","invoice"],
   ["Document","Notes","Long-form text with linked records pulled out down the side.",
    "M7 3.5h7l5 5v12H7v-17Z M14 3.7v5h5 M10 13h6 M10 16.5h4","document"],
-  ["Gallery","Notes","A wall of images and files with a caption on each — for a site or a job.",
+  ["Gallery","Notes","A wall of images and files with a caption on each. For a venue or an event.",
    "M4.5 6h6v6h-6V6Z M13.5 6h6v6h-6V6Z M4.5 14h6v4h-6v-4Z M13.5 14h6v4h-6v-4Z","gallery"],
-  ["Map & locations","Ops","A pinboard of places, with the record's fields beside each pin.",
+  ["Map & locations","Ops","A pinboard of places, with the record's fields beside each pin. For employers by region.",
    "M12 21s6.5-5.6 6.5-11a6.5 6.5 0 1 0-13 0C5.5 15.4 12 21 12 21Z M12 12.8a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z","map"],
-  ["Schedule","Ops","A calendar of bookings against this record, with recurring rules.",
+  ["Schedule","Ops","A calendar of interviews against this record, with recurring rules.",
    "M8 4v3 M16 4v3 M4.5 9.5h15 M6.4 6h11.2A1.9 1.9 0 0 1 19.5 8v10a1.9 1.9 0 0 1-1.9 1.9H6.4A1.9 1.9 0 0 1 4.5 18V8A1.9 1.9 0 0 1 6.4 6Z","schedule"]
 ];
 const REC_TEMPLATE_CATS = ["All","Records","Case work","Finance","Notes","Ops"];
 
-/* ---- admin hub ---- */
-/* ---- admin hub: 13 settings areas in five groups ---- */
-const PEOPLE = [
-  ["Aoife Nolan","Accounts manager","aoife@kilbridegroup.ie","Head office","active","Admin","2 min ago"],
-  ["Séamus Byrne","Senior installer","seamus@kilbridegroup.ie","Ballincollig","active","Standard","1 h ago"],
-  ["Tom Walsh","Operations lead","tom@kilbridegroup.ie","Head office","active","Manager","34 min ago"],
-  ["Niamh Cronin","Trade counter","niamh@kilbridegroup.ie","Ballincollig","active","Standard","3 h ago"],
-  ["Dermot Casey","Buyer · Casey Builders","dermot@caseybuilders.ie","—","external","External","2 days ago"],
-  ["Liam Dunne","Owner · Dunne & Sons","liam@dunneandsons.ie","—","inactive","External","19 days ago"]
-];
-const ROLE_LEVELS = ["Admin","Manager","Standard","External"];
-const PERM_KEYS = [["view","View records"],["edit","Edit records"],["approve","Approve payments"]];
+/* ---- settings: the HQ team and what each role may do ---- */
+const LAST_ACTIVE = ["Now", "4 min ago", "12 min ago", "1 h ago", "2 h ago", "Yesterday", "3 h ago"];
+const PEOPLE = HQ_TEAM.map((p, i) => [p.name, p.role, staffEmail(p.name), "Dublin HQ", "active", p.access, LAST_ACTIVE[i] || "Today"])
+  .concat([["Investor preview", "Read-only seat for the demo data room", "preview@recruit.example", "External", "inactive", "External", "Not used yet"]]);
+const ROLE_LEVELS = ["Owner","Admin","Manager","Finance","External"];
+const PERM_KEYS = [["view","View records"],["edit","Edit records"],["approve","Approve decisions"]];
 const GRANT_DEFS = [
   ["view","View records","Read anything in scope"],
   ["edit","Edit records","Create and change records"],
-  ["approve","Approve decisions","Say yes to parked work"],
-  ["pay","Release payments","Send money out"],
+  ["approve","Approve decisions","Offers, commissions and pricing"],
+  ["contact","See contact details","Only after a candidate agrees"],
   ["export","Export data","Download and share out"],
-  ["agents","Manage agents","Create and grant agents"],
-  ["settings","Change settings","Modules, roles, integrations"],
+  ["agents","Manage agents","Create, tune and pause agents"],
+  ["settings","Change settings","Pricing, roles and integrations"],
   ["audit","Read the audit log","Every action, everyone"]
 ];
-const ROLE_SCOPES = ["All records","Their location","Assigned only"];
-const DEFAULT_PERMS = {Admin:{view:true,edit:true,approve:true}, Manager:{view:true,edit:true,approve:true},
-  Standard:{view:true,edit:true,approve:false}, External:{view:true,edit:false,approve:false}};
-const INTEGRATIONS = [
-  {name:"Gmail", blurb:"Mail in and out of Pulse — threads attach to the record they mention, and drafts wait for your yes.", tint:"#ea4335", status:"connected", statusKind:"ok",
-   glyph:"M4 7.2 12 13 20 7.2 M4 7.2v10.6h16V7.2 M4 7.2 8.5 4h7L20 7.2",
-   lastSync:"2 min ago", usage:"340 emails/day", auth:"OAuth 2.0", scopes:["Read","Send"]},
-  {name:"Xero", blurb:"Invoices, payments and credit notes sync both ways, so the ledger and the record spine never drift.", tint:"#13b5ea", status:"disconnected", statusKind:"bad",
-   glyph:"M4.5 12a7.5 7.5 0 0 1 12.8-5.3 M19.5 12a7.5 7.5 0 0 1-12.8 5.3 M17.3 4v3.3h-3.3 M6.7 20v-3.3H10",
-   lastSync:"27 Feb — token expired", usage:"148 invoices queued", auth:"OAuth 2.0", scopes:["Read","Write"]},
-  {name:"Sage", blurb:"Nightly read of the chart of accounts and balances, mapped onto Pulse organisations.", tint:"#00d639", status:"read only", statusKind:"warn",
-   glyph:"M4 8 12 4.5 20 8 12 11.5 4 8Z M4 13 12 16.5 20 13 M4 18 12 21.5 20 18",
-   lastSync:"14 min ago", usage:"9 accounts synced nightly", auth:"API key", scopes:["Read"]},
-  {name:"HubSpot", blurb:"Contacts, companies and deals stay matched to Pulse records without a second address book.", tint:"#ff7a59", status:"connected", statusKind:"ok",
-   glyph:"M12 9.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z M12 4v3.4 M12 16.6V20 M4 12h3.4 M16.6 12H20 M6.5 6.5l2.4 2.4 M15.1 15.1l2.4 2.4 M17.5 6.5l-2.4 2.4 M8.9 15.1l-2.4 2.4",
-   lastSync:"6 min ago", usage:"1.1k contacts synced", auth:"OAuth 2.0", scopes:["Read","Write"]},
-  {name:"WhatsApp Business", blurb:"Send updates and chase messages from the record, logged against it as they go.", tint:"#25d366", status:"write only", statusKind:"warn",
-   glyph:"M4 19.5 5.3 15A7.7 7.7 0 1 1 8.6 18.2L4 19.5Z M8.6 10.3c0 3 2.4 5.4 5.4 5.4",
-   lastSync:"11 min ago", usage:"62 messages/day", auth:"API key", scopes:["Send"]},
-  {name:"Resend", blurb:"Transactional email for everything Pulse generates — reminders, briefings and receipts.", tint:"var(--accent)", status:"write only", statusKind:"warn",
-   glyph:"M3.5 12 20.5 4 16 20l-3.4-6.6L3.5 12Z",
-   lastSync:"38 min ago", usage:"210 emails/day", auth:"API key", scopes:["Send"]},
-  {name:"Composio", blurb:"One connector for the long tail of tools, so a new system does not need a new build.", tint:DIM, status:"not connected", statusKind:"off",
-   glyph:"M9 3v5 M15 3v5 M6 8h12v3.5a6 6 0 0 1-12 0V8Z M12 17.5V21",
-   lastSync:"—", usage:"—", auth:"—", scopes:[]}
-];
+const ROLE_SCOPES = ["All records","Their team","Assigned only"];
+const DEFAULT_PERMS = {Owner:{view:true,edit:true,approve:true}, Admin:{view:true,edit:true,approve:true},
+  Manager:{view:true,edit:true,approve:false}, Finance:{view:true,edit:true,approve:true}, External:{view:true,edit:false,approve:false}};
+
+/* The integrations roadmap. Nothing in this demo is connected to a live
+   system: every entry is Planned, a Demo simulation or Not connected. */
+const INT_GLYPH = {
+  "CV intake and parsing":"M7 3.5h7l4.5 4.5v12.5H7V3.5Z M14 3.7V8h4.3 M9.5 12.5h6 M9.5 16h4",
+  "Email and notifications":"M3.5 6.5h17v11h-17v-11Z M3.5 7.2l8.5 6.3 8.5-6.3",
+  "Calendar scheduling":"M8 4v3 M16 4v3 M4.5 9.5h15 M6.4 6h11.2A1.9 1.9 0 0 1 19.5 8v10a1.9 1.9 0 0 1-1.9 1.9H6.4A1.9 1.9 0 0 1 4.5 18V8A1.9 1.9 0 0 1 6.4 6Z",
+  "Payment processing":"M3.5 6.5h17v11h-17v-11Z M3.5 10h17 M7 14.5h4",
+  "Educational credential verification":"M12 3.6 19.5 6v6.1c0 4-3.1 6.9-7.5 8.3-4.4-1.4-7.5-4.3-7.5-8.3V6L12 3.6Z M9.2 12.2l2 2 3.6-3.7",
+  "CRM and employer communications":"M4.5 20V6.4A1.4 1.4 0 0 1 5.9 5h6.2a1.4 1.4 0 0 1 1.4 1.4V20 M13.5 10.5h4.6A1.4 1.4 0 0 1 19.5 12v8 M3 20h18 M7.5 8.5h2.5 M7.5 12h2.5",
+  "Analytics":"M4.5 19.5V13 M9.7 19.5V7.5 M14.9 19.5v-8 M20 19.5V5",
+  "LinkedIn":"M20.5 15.5a2 2 0 0 1-2 2H8l-4.5 3.5V5.5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v10Z M8 9h8 M8 12.5h5"
+};
+const INT_TINTS = ["#9fb4ff","#7fe0d2","#e6c78a","#f2c59a","#c8b4f0","#a8e0c0","#9fd6f0","#f0b8c8"];
+const INT_USAGE = {
+  "CV intake and parsing": [agentById("profile").runsToday + " CVs structured today (simulated)", "Runs on prepared demo data", ["Read"]],
+  "Educational credential verification": ["71 issuer requests simulated today", "No institution connected", ["Read"]],
+  "Payment processing": ["No payments are taken in this demo", "Not connected", []],
+  "LinkedIn": ["Founder network context only, not a data source", "Not connected", []]
+};
+const INTEGRATIONS = INTEGRATIONS_ROADMAP.map((r, i) => {
+  const u = INT_USAGE[r.name] || [r.category + " · on the roadmap", "Not connected", []];
+  return {name:r.name, blurb:r.detail, tint:INT_TINTS[i % INT_TINTS.length], status:r.status,
+    statusKind: r.status === "Demo simulation" ? "warn" : "off",
+    glyph: INT_GLYPH[r.name] || INT_GLYPH.Analytics,
+    lastSync: u[1], usage: u[0], auth: r.status === "Planned" ? "Planned" : r.status === "Demo simulation" ? "Simulated" : "None", scopes: u[2]};
+});
 
 /* Background catalogue. Each entry is pure CSS so a tile is the real thing at
    thumbnail size, not a picture of it. */
@@ -248,6 +331,7 @@ const BG_DEFS = [
 ];
 
 const THEMES = [
+  {id:"recruit", label:"Recruit", group:"Dark", bg:"#0b0d13", surface:"#151a24", ink:"#f2f4f8", accent:"#6d86ff"},
   {id:"dark", label:"Dark", group:"Dark", bg:"#0b0c0b", surface:"#1a1c19", ink:"#f2f3ef", accent:"#c8f04b"},
   {id:"indigo", label:"Indigo", group:"Dark", bg:"#0a0b13", surface:"#1a1b26", ink:"#f0f1fa", accent:"#8b93ff"},
   {id:"slate", label:"Slate", group:"Dark", bg:"#100e0c", surface:"#211c17", ink:"#f4f0ea", accent:"#e8a14a"},
@@ -263,6 +347,7 @@ const THEMES = [
   {id:"sand", label:"Sand", group:"Light", bg:"#f6f1e6", surface:"#fffdf7", ink:"#221d12", accent:"#7d5fd6"}
 ];
 
+
 const ADMIN_ICONS = {
   people:"M12 12.5a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z M5 20.2c.9-3.1 3.6-4.9 7-4.9s6.1 1.8 7 4.9",
   teams:"M9 12a3.2 3.2 0 1 0 0-6.4A3.2 3.2 0 0 0 9 12Z M16.5 12.5a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z M2.6 19.6c.8-2.8 3.2-4.4 6.4-4.4s5.6 1.6 6.4 4.4 M17 15.4c2.2.4 3.7 1.8 4.3 4.2",
@@ -277,268 +362,388 @@ const ADMIN_ICONS = {
   audit:"M8 3.5h8l3.5 3.5v13a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 6 3.5h2Z M9 12h6 M9 16h4",
   brand:"M12 3.5 14.6 9l6.4.6-4.8 4.2 1.4 6.2-5.6-3.3-5.6 3.3 1.4-6.2L3 9.6 9.4 9 12 3.5Z",
   bell:"M6 8.5a6 6 0 0 1 12 0c0 6.5 2.6 8.5 2.6 8.5H3.4S6 15 6 8.5Z M10.3 20.5a1.94 1.94 0 0 0 3.4 0",
-  data:"M4.5 7.5c0-1.7 3.4-3 7.5-3s7.5 1.3 7.5 3-3.4 3-7.5 3-7.5-1.3-7.5-3Z M4.5 7.5v9c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-9 M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"
+  data:"M4.5 7.5c0-1.7 3.4-3 7.5-3s7.5 1.3 7.5 3-3.4 3-7.5 3-7.5-1.3-7.5-3Z M4.5 7.5v9c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-9 M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3",
+  money:"M17.5 6.5a6.5 6.5 0 1 0 0 11 M3.5 10.5H13 M3.5 13.5H13",
+  percent:"M19 5 5 19 M7.5 9.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M16.5 18.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z",
+  calc:"M7 3.5h10a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z M8.5 7h7v3h-7V7Z M8.6 13.5h.01 M12 13.5h.01 M15.4 13.5h.01 M8.6 17h.01 M12 17h.01 M15.4 17h.01",
+  eye:"M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z M12 14.8a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6Z"
 };
 
+/* Settings rows: [label, value] is a value; [label, note, true|false] is a
+   local switch; [label, value, "note"|"locked", note] is a value with a note
+   under it; [label, note, "gov:<id>"] is bound to the shared governance state.
+   Cards whose rows depend on editable state (tiers, commission, consent,
+   renewals) are refreshed from the shared store in PulseLogic. */
+const pctRate = (r) => Math.round(r * 100) + "%";
+const ECON = placementEconomics();
+const TEAM_SIZE = HQ_TEAMS.reduce((t, x) => t + x.members, 0);
 const ADMIN_CARDS = [
-  {id:"people", group:"ORGANISATION", title:"People & access", icon:"people", tint:"#6ad0f0",
-   blurb:"Invite, suspend and offboard the people who use Pulse.",
-   tags:["48 people","6 teams","3 locations"], badge:"3 waiting", badgeKind:"warn",
-   footer:"Last login checked 4 minutes ago", action:"Review 3 invites",
+  {id:"people", group:"ORGANISATION", title:"People and access", icon:"people", tint:"#7fe0d2",
+   blurb:"Invite, suspend and offboard the people who use Recruit HQ.",
+   tags:[HQ_TEAM.length + " leads", TEAM_SIZE + " people", "Dublin HQ"], badge:"1 unused seat", badgeKind:"warn",
+   listLabel:"WHAT YOU CONTROL HERE", rows:[]},
+  {id:"roles", group:"ORGANISATION", title:"Roles and permissions", icon:"shield", tint:"var(--accent)",
+   blurb:"Permission templates, and exactly what each role can reach.",
+   tags:[ROLE_LEVELS.length + " roles", GRANT_DEFS.length + " grants", ROLE_SCOPES.length + " scopes"],
+   heroLabel:"SEE IT AS SOMEONE ELSE", heroAction:"Preview the employer view",
+   heroText:"Switch to Harbourview's view of Recruit to check what an employer sees: anonymised profiles until a candidate agrees, and only its own vacancies and offers.",
    listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Add, invite or remove employees","",""],["Create teams and departments","6 teams"],["Assign managers","4 reporting lines"],
-     ["Set locations","Head office · Ballincollig · Mallow"],["Suspend accounts","2 suspended"],["View last login","48 people tracked"]]},
-  {id:"teams", group:"ORGANISATION", title:"Roles & permissions", icon:"shield", tint:"var(--accent)",
-   blurb:"Permission templates, and exactly what each person can reach.",
-   tags:["4 roles","64 permissions","3 scopes"],
-   heroLabel:"THE QUESTION THIS ANSWERS", heroAction:"Show me what someone can access",
-   heroText:"Pick a person and see every record, action and export they can reach — resolved through their grants, not guessed from the menus.",
-   footer:"Preview Pulse as another user", action:"Open preview",
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Create permission templates","4 in use"],["View, edit, export and delete access","per permission"],
-     ["Restrict by team, location or record owner","3 scopes"],["Set approval limits","€10,000 threshold"],["Preview Pulse as another user",""]]},
-  {id:"structure", group:"ORGANISATION", title:"Company structure", icon:"structure", tint:"#f0c04b",
-   blurb:"Who reports to whom, where they work and when.",
-   tags:["3 locations","Europe/Dublin","EUR"],
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Company details","Kilbride Group"],["Departments","5"],["Teams","6"],["Locations","3"],
-     ["Reporting lines","4"],["Working hours","08:00–17:30, Mon–Fri"],["Holidays","Irish public holidays"],
-     ["Default currency and timezone","EUR · Europe/Dublin"]]},
+   rows:[["Owner","John O'Farrell"],["Admin","Marketplace Operations"],["Manager","Team leads"],["Finance","Invoices, commissions and forecasts"],
+     ["Candidate contact details","Always on","locked","Visible only after the candidate accepts an introduction."],
+     ["Approving offers, pricing and commission","Owner only"]]},
+  {id:"structure", group:"ORGANISATION", title:"Company structure", icon:"structure", tint:"#e6c78a",
+   blurb:"The company behind Recruit, where it works and when.",
+   tags:["Dublin", ORG.currency, ORG.timezone], listLabel:"COMPANY DETAILS",
+   rows:[["Company", ORG.legalName],["Product", ORG.product],["Founder", ORG.founder],["Incorporated", ORG.incorporated],
+     ["Location", ORG.location],["Teams", String(HQ_TEAMS.length)],["Working hours","09:00 to 17:30, Mon to Fri"],
+     ["Currency and timezone", ORG.currency + " · " + ORG.timezone]]},
+  {id:"appearance", group:"ORGANISATION", title:"Appearance and themes", icon:"brand", tint:"#9fd6f0",
+   blurb:"Pick a light or dark theme for how Recruit HQ looks to you.",
+   tags:["Recruit theme"], listLabel:"THEMES", rows:[]},
 
-  {id:"agents", group:"CONTROL", title:"Agents & AI controls", icon:"agent", tint:"var(--accent)",
-   blurb:"What agents may read, what they may do, and where they must stop.",
-   tags:["7 agents","318 actions today","€0.62 spent"],
+  {id:"teams", group:"TEAM", title:"Teams", icon:"teams", tint:"#a8e0c0",
+   blurb:"Who leads each part of Recruit and what they own.",
+   tags:[HQ_TEAMS.length + " teams", TEAM_SIZE + " people"], listLabel:"TEAMS AND LEADS",
+   rows: HQ_TEAMS.map(t => [t.name + " · " + t.lead, t.members + (t.members === 1 ? " person" : " people"), "note", t.remit])},
+  {id:"agents", group:"TEAM", title:"Agents and AI controls", icon:"agent", tint:"var(--accent)",
+   blurb:"What Recruit's eight agents may read, what they may do, and where they must stop.",
+   tags:[RECRUIT_AGENTS.length + " agents", num(AGENT_RUNS_TODAY) + " runs today"],
    heroLabel:"GLOBAL CONTROL", heroAction:"Pause every agent",
-   heroText:"One switch stops every agent immediately. Anything mid-run finishes its current step and then holds.",
-   footer:"Write and external tools always need a yes", action:"Review limits",
+   heroText:"One switch pauses every agent. Anything mid-run finishes its current step and then holds.",
    listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Create approved agent roles","7 approved"],["Control which data agents can read","by permission"],
-     ["Control which actions agents can take","read · write · external"],["Set approval requirements","all write tools", true],
-     ["Set spending and usage limits","€40/month cap"],["Manage agent memory and retention","90 days"]]},
-  {id:"wf", group:"CONTROL", title:"Workflow controls", icon:"flow", tint:"#9d8cf5",
-   blurb:"The guardrails, not the builder — that lives under Work.",
-   tags:["Managers only","2 approval rules","Retry twice"],
-   footer:"Building workflows happens in Work", action:"Open Work",
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Who can create workflows","Managers only"],["Maximum autonomy","proposes, never sends", true],
-     ["Approval rules","2 configured"],["Failure handling","retry twice, then notify"],
-     ["Usage limits","500 runs/day"],["Global pause","all workflows", true],["Default notification settings","inbox only"]]},
-  {id:"notif", group:"CONTROL", title:"Notifications", icon:"bell", tint:"#f0994b",
-   blurb:"Which events reach people, on which channel, and when not to.",
-   tags:["Inbox","WhatsApp","Quiet 19:00–07:00"],
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Which events trigger notifications","14 of 21 events"],["Email","", true],["WhatsApp","", true],
-     ["Mobile push","", false],["In-app","", true],["Escalation rules","after 4 hours unread"],
-     ["Quiet hours","19:00–07:00"],["Daily and weekly summaries","07:00 daily"]]},
+   rows:[["Agents never contact candidates or employers","Drafts go to a person", true],
+     ["Agents cannot mark a fact as verified","Always on","locked","Only a confirmation or a person changes verification status."],
+     ["Write and external tools wait for a person","Approval required", true],
+     ["Salary figures labelled as estimates","Always on","locked","Every market range and scenario says it is illustrative."],
+     ["Monthly usage cap","€40"],["Memory and retention","90 days"]]},
+  {id:"notif", group:"TEAM", title:"Notifications", icon:"bell", tint:"#f2c59a",
+   blurb:"Which events reach the team, on which channel, and when not to.",
+   tags:["Inbox","Email planned","Quiet 19:00 to 07:00"], listLabel:"WHAT TRIGGERS A NOTIFICATION",
+   rows:[["Vacancy with no shortlist after 21 days","Ops Watchdog", true],["Offer waiting on approval for 24 hours","Ops Watchdog", true],
+     ["Verification older than 5 days","Verification Agent", true],["Membership renewal in 30 days","Ops Watchdog", true],
+     ["Introduction unanswered for 48 hours","Ops Watchdog", false],["Email delivery","Planned integration"],
+     ["Quiet hours","19:00 to 07:00"],["Founder briefing","07:00 on weekdays"]]},
+  {id:"wf", group:"TEAM", title:"Workflow controls", icon:"flow", tint:"#c8b4f0",
+   blurb:"The guardrails, not the builder. Building workflows happens in Work.",
+   tags:["Team leads","Retry twice"], listLabel:"WHAT YOU CONTROL HERE",
+   rows:[["Who can create workflows","Team leads"],["Maximum autonomy","Proposes, never sends", true],
+     ["Failure handling","Retry twice, then notify"],["Usage limit","500 runs a day"],["Global pause","All workflows", false]]},
 
-  {id:"integrations", group:"SYSTEMS", title:"Integrations", icon:"plug", tint:"#6ad0f0",
-   blurb:"Email, accounting, CRM and messaging — and which way data flows.",
-   tags:["6 connected","1 disconnected","2 read-only"], badge:"Xero down", badgeKind:"bad",
-   footer:"Xero token expired 27 February", action:"Reconnect",
-   listLabel:"CONNECTIONS",
-   rows:[["Gmail","read and write"],["Xero","disconnected"],["Sage","read only"],["HubSpot","read and write"],
-     ["WhatsApp Business","write only"],["Resend","write only"],["Composio","not connected"]]},
-  {id:"modules", group:"SYSTEMS", title:"Modules & configuration", icon:"modules", tint:"#f0c04b",
-   blurb:"Turn modules on, and make Pulse speak the business's own words.",
-   tags:["3 installed","1 available","2 renamed terms"],
-   heroLabel:"TERMINOLOGY", heroAction:"Edit terminology",
-   heroText:"Organisation reads as Merchant, and Task reads as Job, everywhere in the interface — including what Helios says back to you.",
+  {id:"tiers", group:"PRICING", title:"Membership tiers", icon:"money", tint:"#e6c78a",
+   blurb:"Five tiers by employer size. Starter, Growth and Enterprise prices came from John; Professional and Group are concept assumptions.",
+   tags:[TIERS.length + " tiers", eur(MEMBERSHIP_ANNUAL) + " a year"],
+   heroLabel:"SIMULATED, ANNUALISED", heroAction:"Open membership revenue",
+   heroText: eur(MEMBERSHIP_ANNUAL) + " a year across " + num(totalAccounts(TIERS)) + " employer accounts at the current mix. Every view reads these same prices.",
+   listLabel:"TIERS",
+   rows: TIERS.map(t => [t.label + " · " + t.band, eur(t.price) + " a year", "note", t.confirmed ? "Price from the founder" : "Concept assumption"])},
+  {id:"commission", group:"PRICING", title:"Success fees and commission", icon:"percent", tint:"#f0a33e",
+   blurb:"The success fee charged on each hire, and the proposals waiting on a decision.",
+   tags:[pctRate(MARKET.recruitDefaultRate) + " default", pctRate(MARKET.agencyBenchmarkRate) + " agency comparison"],
+   badge:"1 awaiting you", badgeKind:"warn",
+   heroLabel:"PENDING DECISION", heroAction:"Review in Work",
+   heroText:"Executive placements at 10% above €120,000 are proposed and waiting on you. At 10%, a €128,000 placement carries a €12,800 fee instead of €10,240.",
+   listLabel:"RULES",
+   rows: COMMISSION_RULES.map(r => [r.label, pctRate(r.rate) + " · " + r.applies, "note", r.note])},
+  {id:"calculator", group:"PRICING", title:"Agency comparison", icon:"calc", tint:"#9fd6f0",
+   blurb:"The assumptions behind every saving Recruit quotes to employers.",
+   tags:[pctRate(MARKET.agencyBenchmarkRate) + " agency", pctRate(MARKET.recruitDefaultRate) + " Recruit"], listLabel:"ASSUMPTIONS",
+   rows:[["Agency benchmark fee", pctRate(MARKET.agencyBenchmarkRate)],["Recruit default success fee", pctRate(MARKET.recruitDefaultRate)],
+     ["Average placement salary", eur(MARKET.avgPlacementSalary), "note", "Assumption for the scenario"],
+     ["Saving per placement", eur(MARKET.avgPlacementSalary * (MARKET.agencyBenchmarkRate - MARKET.recruitDefaultRate)), "note", "Before the membership fee"],
+     ["This month, " + MARKET.placementsThisMonth + " placements", eur(ECON.saving), "note", "Illustrative saving against agency fees"]]},
+  {id:"renewals", group:"PRICING", title:"Renewals and billing", icon:"flow", tint:"#a8e0c0",
+   blurb:"Renewal dates, reminders and invoices. Payment processing is not connected in this demo.",
+   tags:[RENEWALS_30 + " due in 30 days", "Billing simulated"], badge: RENEWALS_30 + " due", badgeKind:"warn",
+   heroLabel:"NEXT UP", heroAction:"Open memberships",
+   heroText:"Saltmarsh Bay Resort renews on 6 Dec and engagement is down since the season ended. Alder & Oak renews on 27 Dec and is likely to move up a tier.",
    listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Enable or disable modules","3 installed"],["Rename business terminology","2 overridden"],
-     ["Create custom fields","9 fields"],["Configure statuses","6 sets"],["Edit record types","7 types"],
-     ["Set required information","per record type"],["Manage form layouts","4 layouts"]]},
-  {id:"health", group:"SYSTEMS", title:"Data health", icon:"health", tint:"#e2705c",
-   blurb:"What is wrong with the data, how bad it is, and the fix.",
-   tags:["7 issue types","231 records affected"], badge:"74 duplicates", badgeKind:"bad",
-   footer:"Last scanned 12 minutes ago", action:"Fix 3 automatically",
-   listLabel:"ISSUES FOUND",
-   trend:[312,289,274,256,248,241,231],
-   bySeverity:[["High","137",RED],["Medium","59",AMBER],["Low","35",DIM]],
-   issues:[["Duplicate records","74","high","Merge on matching name and VAT number","Fix automatically"],
-     ["Missing required fields","62","high","4 organisations have no billing email","Fix automatically"],
-     ["Failed imports","18","medium","Re-run the 14 August Sage batch","Retry"],
-     ["Out-of-date information","41","medium","Not touched in over 18 months","Review"],
-     ["Broken connections","1","high","Xero refresh token expired","Reconnect"],
-     ["Unmatched records","23","low","Invoices with no organisation attached","Review"],
-     ["Records needing review","12","low","Flagged by an agent as inconsistent","Review"]],
-   rows:[]},
+   rows:[["Memberships expiring within 30 days", String(RENEWALS_30)],["Renewal reminders","30, 14 and 3 days before", true],
+     ["Reminders need a person to send","Drafted by Ops Watchdog", true],["Payment processing","Not connected"],
+     ["Overdue invoices","1 · €4,060 Cedarhouse Hotels"]]},
 
-  {id:"security", group:"GOVERNANCE", title:"Security", icon:"lock", tint:"#8fa6ff",
-   blurb:"Sign-in, sessions, devices and the keys that reach the API.",
-   tags:["SSO on","2FA enforced","3 API keys"], badge:"2 advisories", badgeKind:"warn",
-   footer:"2 security recommendations open", action:"Review",
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Single sign-on","Google Workspace", true],["Two-factor authentication","enforced", true],
-     ["Login policies","30-day session"],["Active sessions","51"],["Approved devices","44"],
-     ["IP restrictions","off", false],["Security alerts","on", true],["API keys","3 active"],
-     ["Data retention rules","7 years"]]},
-  {id:"audit", group:"GOVERNANCE", title:"Audit log", icon:"audit", tint:"#9d8cf5",
-   blurb:"A locked history of who changed what. Searchable, exportable, never editable.",
-   tags:["Append-only","7-year retention"],
-   footer:"Nobody can edit or delete entries", action:"Export",
+  {id:"integrations", group:"INTEGRATIONS", title:"Integrations roadmap", icon:"plug", tint:"#9fd6f0",
+   blurb:"Nothing in this demo is connected to a live system. Each connection is Planned, a Demo simulation or Not connected.",
+   tags:[INTEGRATIONS.filter(i => i.status === "Planned").length + " planned", INTEGRATIONS.filter(i => i.status === "Demo simulation").length + " simulated"],
+   badge:"None live", badgeKind:"", listLabel:"CONNECTIONS", rows:[]},
+  {id:"sources", group:"INTEGRATIONS", title:"Data sources", icon:"data", tint:"#c8b4f0",
+   blurb:"Where every number in Recruit HQ comes from.", listLabel:"SOURCES",
+   rows:[["Marketplace figures","Illustrative scenario","note","O'Farrell Sterling was incorporated in June 2026 and Recruit is not yet operating."],
+     ["CV analysis","Prepared demo data","note","No document leaves the browser."],["Salary benchmarks","Illustrative ranges"],
+     ["Founder network","Founder-provided context","note","Around 30,000 LinkedIn followers. Not a connected data source."],
+     ["Education partners","Fictional, none signed"],["Saved changes","Stay in this browser"]]},
+  {id:"api", group:"INTEGRATIONS", title:"API and webhooks", icon:"modules", tint:"#f0b8c8",
+   blurb:"Keys and outbound events for future integrations.", listLabel:"WHAT YOU CONTROL HERE",
+   rows:[["API keys","None issued"],["Outbound webhooks","None configured"],["Sandbox mode","Demo data only", true],["Event log retention","90 days"]]},
+
+  {id:"consent", group:"GOVERNANCE", title:"Consent and privacy", icon:"eye", tint:"#7fe0d2",
+   blurb:"How candidate data is shared, scored and protected. Locked rules cannot be switched off.",
+   tags:[GOVERNANCE.filter(g => g.locked).length + " locked rules"],
+   badge: PRIVACY_REQUESTS.filter(r => r.status !== "Completed").length + " requests open", badgeKind:"warn",
+   listLabel:"RULES",
+   rows: GOVERNANCE.map(g => g.locked ? [g.label, "Always on", "locked", g.note] : [g.label, g.note, "gov:" + g.id])},
+  {id:"audit", group:"GOVERNANCE", title:"Audit log", icon:"audit", tint:"#c8b4f0",
+   blurb:"A locked history of who did what. Searchable, exportable, never editable.",
+   tags:["Append-only"], heroLabel:"FULL HISTORY", heroAction:"Open activity",
+   heroText:"Every hiring, profile and financial event, from the portals and the agents, is in Activity with the person or agent behind it.",
    listLabel:"WHAT IS RECORDED",
-   rows:[["Permission changes","41 this month"],["Employee access","118"],["Data exports","9"],
-     ["Integration changes","6"],["Agent actions","2,140"],["Deleted records","3"],["Admin changes","27"]]},
-  {id:"datamgmt", group:"GOVERNANCE", title:"Data management", icon:"data", tint:"#5fe0a8",
-   blurb:"Import, export, restore and — carefully — delete.",
-   tags:["Backup 02:00","30-day restore"],
-   footer:"Last backup completed 02:00 today", action:"Run backup",
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Import data","CSV, Sage, HubSpot"],["Export data","full or per module"],["Backup status","healthy · 02:00 daily"],
-     ["Restore previous versions","30 days available"],["Merge records","74 candidates"],
-     ["Data retention","7 years"],["Delete company data","requires two admins"]]},
-
-  {id:"brand", group:"EXPERIENCE", title:"Branding", icon:"brand", tint:"var(--accent)",
-   blurb:"Logo, accent colour, templates and how agents appear.",
-   tags:["Lime accent","2 templates"],
-   listLabel:"WHAT YOU CONTROL HERE",
-   rows:[["Company logo","kilbride-mark.svg"],["Pulse accent colour","oklch(0.86 0.19 118)"],
-     ["Email templates","3"],["Document templates","2"],["Agent appearance","12 faces · 6 shells"],
-     ["Customer-facing portal branding","on", true]]},
-  {id:"appearance", group:"EXPERIENCE", title:"Appearance & themes", icon:"brand", tint:"#6ad0f0",
-   blurb:"Pick a light or dark theme for how Pulse looks to you.",
-   tags:["8 themes","4 dark","4 light"],
-   listLabel:"THEMES", rows:[]}
+   rows:[["Agent runs today", num(AGENT_RUNS_TODAY)],["Hiring decisions","Written as the person who made them"],
+     ["Privacy requests", PRIVACY_REQUESTS.length + " this month"],["Permission changes","Logged"],["Exports","Logged"],["Deleted records","Logged, never editable"]]},
+  {id:"datamgmt", group:"GOVERNANCE", title:"Data management", icon:"data", tint:"#a8e0c0",
+   blurb:"Export, correct and delete, with a 30-day clock on every request.", listLabel:"REQUESTS",
+   rows: PRIVACY_REQUESTS.map(r => [r.type + " · " + r.who, r.status, "note", r.age === "Today" ? "Raised today" : "Raised " + r.age + " ago"])},
+  {id:"security", group:"GOVERNANCE", title:"Security", icon:"lock", tint:"#9fb4ff",
+   blurb:"Sign-in, sessions and devices for the HQ team.", listLabel:"WHAT YOU CONTROL HERE",
+   rows:[["Two-factor authentication","Required for HQ", true],["Single sign-on","Planned"],["Session length","12 hours"],
+     ["Security alerts","Sent to the founder", true],["Candidate data deletion","Self-service, within 30 days"]]},
+  {id:"dataquality", group:"GOVERNANCE", title:"Data quality", icon:"health", tint:"#f07a9d",
+   blurb:"What is wrong with the data, how much of it, and the fix.",
+   tags:["5 issue types"], badge: VERIFY_OLD + " overdue", badgeKind:"bad", listLabel:"ISSUES FOUND",
+   issues:[["Verification older than 5 days", String(VERIFY_OLD), "high", "Mostly qualifications waiting on issuers. Yasmin Haddad's team clears the manual queue.", "Open verification", {page:"hq.talent", tab:"verification"}],
+     ["Profiles missing salary expectations", "312", "medium", "Matching is weaker without an expected range. Profile Intelligence has a nudge drafted.", "Open candidates", {page:"hq.talent", tab:"candidates"}],
+     ["Checks waiting on candidate documents", "25", "medium", "From this morning's verification run. The agent chases; nothing is marked verified.", "Open verification", {page:"hq.talent", tab:"verification"}],
+     ["Issuer not connected", "1", "low", "Universidade do Tejo, for Lucia Ferreira's MSc, moved to the manual queue (simulated).", "Open Lucia Ferreira", {drawer:["candidate", "c-lucia"]}],
+     ["Invoices overdue", "1", "low", "Cedarhouse Hotels, €4,060 for the Accommodation Manager placement.", "Open placements", {page:"hq.roles", tab:"placements"}]],
+   rows:[]}
 ];
 
 const ADMIN_GROUPS = [
   ["ORGANISATION", "repeat(3,1fr)"],
-  ["CONTROL", "repeat(3,1fr)"],
-  ["SYSTEMS", "repeat(3,1fr)"],
-  ["GOVERNANCE", "repeat(3,1fr)"],
-  ["EXPERIENCE", "repeat(3,1fr)"]
+  ["TEAM", "repeat(3,1fr)"],
+  ["PRICING", "repeat(3,1fr)"],
+  ["INTEGRATIONS", "repeat(3,1fr)"],
+  ["GOVERNANCE", "repeat(3,1fr)"]
 ];
 
-/* ---- activity feeds ---- */
-const SRC_TINT = {Gmail:"#f07a9d", Pulse:"var(--accent)", Sage:"#6ad0f0", WhatsApp:"#5fe0a8",
-  HubSpot:"#f0994b", Xero:"#8fa6ff", Agent:"var(--accent)"};
-const SRC_ABBR = {Gmail:"GM", Pulse:"PL", Sage:"SG", WhatsApp:"WA", HubSpot:"HS", Xero:"XR", Agent:"AI"};
+/* ---- activity: three streams ---- */
+const SRC_TINT = {Recruit:"var(--accent)", Agent:"#c8b4f0", Employer:"#7fe0d2", Candidate:"#9fb4ff", Partner:"#e6c78a"};
+const SRC_ABBR = {Recruit:"RC", Agent:"AI", Employer:"EM", Candidate:"CA", Partner:"PT"};
 
-const DATA_EVENTS = [
-  ["New customer created","McKenna Transport was added from a web enquiry.","Web form","McKenna Transport","Pulse","completed"],
-  ["Invoice imported","INV-10512 for €3,240 arrived from Sage and matched to an open order.","Sage sync","Casey Builders","Sage","completed"],
-  ["Email received","Purchase order attached — parsed and filed against the account.","accounts@caseybuilders.ie","Casey Builders","Gmail","completed"],
-  ["File uploaded","Signed framework 2026.pdf — 6 pages indexed for Helios.","Aoife Nolan","Casey Builders","Pulse","completed"],
-  ["42 records imported","Nightly Sage sync brought in 42 invoice lines across 9 accounts.","Sage sync","9 organisations","Sage","completed"],
-  ["CRM record updated","Credit limit changed on the account after the August review.","HubSpot sync","Fitzgerald Heating","HubSpot","completed"],
-  ["Form submitted","Site survey request for a boiler replacement in Glanmire.","Web form","Ó Riain, Glanmire","Pulse","completed"],
-  ["WhatsApp message received","Photo of the meter reading filed against the visit.","Séamus Byrne","Ballincollig depot","WhatsApp","completed"],
-  ["External system synced","Xero connection retried and failed — token still expired.","Xero","148 invoices queued","Xero","failed"]
+/* The live ticker. These are the repeatable, anonymous events of a busy
+   marketplace; named events come from the shared store and the portals.
+   [title, note, actor, related record, source, status] */
+const HIRING_EVENTS = [
+  ["Marketplace search","An employer searched for revenue managers in Leinster and saved three profiles.","Employer search","Talent marketplace","Employer","completed"],
+  ["Profiles re-ranked","A vacancy was re-ranked after a candidate updated their profile.","Talent Matchmaker","Open vacancy","Agent","working"],
+  ["Anonymised profile viewed","An employer opened an anonymised profile. Contact details stay hidden.","Employer","Anonymised profile","Employer","completed"],
+  ["Vacancies checked","Open roles checked for anything with no shortlist after 21 days.","Ops Watchdog","Open vacancies","Agent","working"],
+  ["Interview times offered","An employer offered three interview slots through Recruit.","Employer","Interview","Employer","completed"],
+  ["Application started","A professional started an application from a recommended role.","Candidate","Recommended role","Candidate","completed"]
 ];
-
-const PEOPLE_EVENTS = [
-  ["Aoife approved a refund","€412 written off on INV-10233 after the parts dispute closed.","Aoife Nolan","Glanmire Mechanical","Pulse","completed"],
-  ["Tom changed a booking","Thursday's depot visit moved to 11:00 to fit the delivery window.","Tom Walsh","Ballincollig depot","Pulse","completed"],
-  ["Mac assigned a task","Lease decision handed to himself, due Thursday.","Martin Kilbride","Ballincollig depot","Pulse","completed"],
-  ["Finance uploaded a report","August month-end close workbook, nine sheets.","Aoife Nolan","Head office","Pulse","completed"],
-  ["Niamh edited customer details","Billing email corrected so reminders stop bouncing.","Niamh Cronin","Dunne & Sons Ltd","Pulse","completed"],
-  ["Séamus completed a visit","Warranty callback closed — parts ordered on the spot.","Séamus Byrne","Fitzgerald Heating","Pulse","completed"],
-  ["Purchase order raised","PO-4471 for €14,280 sent up for sign-off.","Aoife Nolan","Munster Plumbing","Pulse","awaiting"],
-  ["Credit limit increase requested","€10,000 to €18,000 — waiting on the second approval.","Niamh Cronin","Casey Builders","Pulse","awaiting"]
+const PROFILE_EVENTS = [
+  ["CV analysed","A CV was structured into a profile draft with items to verify (simulated).","Profile Intelligence","New professional","Agent","working"],
+  ["Professional registered","A new professional joined Recruit and started a profile.","Recruit","New profile","Recruit","completed"],
+  ["Credential check sent","A qualification was sent to its issuer for confirmation (simulated).","Verification Agent","Verification queue","Agent","working"],
+  ["Market range refreshed","An estimated salary range was refreshed after a profile change.","Market Value Analyst","Profile","Agent","completed"],
+  ["Visibility changed","A professional switched their profile to anonymous.","Candidate","Privacy settings","Candidate","completed"],
+  ["Course opened","A professional opened a partner course from their development plan.","Candidate","Partner course","Partner","completed"]
 ];
-
-const AI_EVENTS = [
-  ["Finance Agent checked 143 invoices","Three accounts over their limit and €41.2k past 60 days.","Finance Agent","3 organisations","Agent","working"],
-  ["Sales Agent qualified a new lead","McKenna Transport scored 82/100 on company size, location and enquiry detail.","Sales Agent","McKenna Transport","HubSpot","working"],
-  ["Operations Agent updated a schedule","Van 04's jobs redistributed across two installers.","Operations Agent","Ballincollig depot","Agent","working"],
-  ["Helios prepared a report","Weekly management one-pager written and filed.","Helios","Management","Agent","working"],
-  ["Agent paused for approval","Chase email to Dunne & Sons drafted — needs your yes before it sends.","Finance Agent","Dunne & Sons Ltd","Agent","awaiting"],
-  ["Workflow failed","Certificate renewal reminder could not find a contact for Mallow yard.","Operations","Mallow yard","Agent","failed"],
-  ["Stock Watch raised order lines","Two lines below reorder point before Thursday's jobs.","Stock Watch","Munster Plumbing","Agent","working"],
-  ["Briefing Agent posted the morning brief","Two items needed you; the rest was noise.","Briefing Agent","Martin Kilbride","WhatsApp","completed"]
+const FINANCIAL_EVENTS = [
+  ["Membership payment recorded","A membership payment was recorded (simulated, no payment taken).","Recruit","Membership","Recruit","completed"],
+  ["Fee estimate updated","A success fee estimate was recalculated after an offer changed.","Recruit","Offer","Recruit","completed"],
+  ["Renewal reminder drafted","A renewal reminder was drafted for review. Not sent.","Ops Watchdog","Membership","Agent","awaiting"],
+  ["Partner share accrued","A referral share accrued to a concept partner. No agreement is signed.","Recruit","Education partner","Partner","completed"],
+  ["Plans compared","An employer compared membership tiers in the cost calculator.","Employer","Pricing","Employer","completed"]
 ];
 
 const STREAM_DEFS = [
-  {id:"data", title:"New data", sub:"Information entering Pulse", pool:DATA_EVENTS, every:3200,
-   tint:"#6ad0f0", icon:"M4.5 7.5c0-1.7 3.4-3 7.5-3s7.5 1.3 7.5 3-3.4 3-7.5 3-7.5-1.3-7.5-3Z M4.5 7.5v9c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-9 M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"},
-  {id:"people", title:"Employee activity", sub:"Decisions people made", pool:PEOPLE_EVENTS, every:6400,
-   tint:"#f0c04b", icon:"M12 12.5a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2Z M5 20.2c.9-3.1 3.6-4.9 7-4.9s6.1 1.8 7 4.9"},
-  {id:"ai", title:"AI activity", sub:"Agents at work", pool:AI_EVENTS, every:4600,
-   tint:"var(--accent)", icon:"M2 12h4l2.5-6 3.5 12 3-8 2 2h5"}
+  {id:"hiring", title:"Hiring activity", sub:"Vacancies, interviews and offers", pool:HIRING_EVENTS, every:5200,
+   tint:"var(--accent)", icon:"M9 6V4.8a1.3 1.3 0 0 1 1.3-1.3h3.4A1.3 1.3 0 0 1 15 4.8V6 M4.5 6h15A1.5 1.5 0 0 1 21 7.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-10A1.5 1.5 0 0 1 4.5 6Z M3 12h18"},
+  {id:"profiles", title:"Profiles and verification", sub:"CVs, credentials and learning", pool:PROFILE_EVENTS, every:4300,
+   tint:"var(--teal)", icon:"M12 3.6 19.5 6v6.1c0 4-3.1 6.9-7.5 8.3-4.4-1.4-7.5-4.3-7.5-8.3V6L12 3.6Z M9.2 12.2l2 2 3.6-3.7"},
+  {id:"financial", title:"Financial", sub:"Memberships, fees and partner shares", pool:FINANCIAL_EVENTS, every:8800,
+   tint:"#e6c78a", icon:"M17.5 6.5a6.5 6.5 0 1 0 0 11 M3.5 10.5H13 M3.5 13.5H13"}
 ];
 
+/* The HQ rail. recruit/nav.tsx (NAVS.hq) is the source; this mirrors it as a fallback. */
 const NAV = [
   {label:"Home", icon:"helios", page:"Home"},
   {label:"Agents", icon:"navAgents", page:"Agents"},
+  {divider:true},
+  {label:"Talent", icon:"talent", page:"hq.talent"},
+  {label:"Employers", icon:"employer", page:"hq.employers"},
+  {label:"Roles and placements", icon:"jobs", page:"hq.roles"},
+  {label:"Learning partners", icon:"learning", page:"hq.learning"},
+  {label:"Revenue", icon:"revenue", page:"hq.revenue"},
+  {divider:true},
   {label:"Dashboard", icon:"navDash", page:"Dashboard", dot:true},
   {label:"Work", icon:"navWork", page:"Work"},
   {label:"Records", icon:"navRecords", page:"Records"},
   {label:"Activity", icon:"pulseLine", page:"Activity", dot:true}
 ];
 
-/* Inbox items follow the real InboxItem shape: what happened, why it matters, what I can do. */
+/* The HQ action inbox: what happened, why it matters, what John can do.
+   go is where the row leads: a page and tab, or a shared drawer. */
+const FENWICK = EMPLOYER_BY_ID["e-fenwick"], FV_OPS = VACANCIES.find(v => v.id === "v-fv-opsd");
+const CEDAR_PL = PLACEMENTS.find(p => p.employerId === "e-cedarhouse" && p.invoice === "overdue") || PLACEMENTS[0];
 const ITEMS = {
-  po:{kind:"Approval", importance:"high", icon:ICONS.approvals, age:"18m",
-    title:"Purchase order PO-4471 — €14,280",
-    why:"Raised by Aoife Nolan. €4,280 above your sign-off threshold, so it routed to you.",
-    detail:"Both lines are below reorder point and committed to Thursday's jobs. Pricing matches the June supplier agreement. Approving writes the decision as you and fires core.approval.updated.",
-    actionLabel:"Approve", secondaryLabel:"Request changes", group:"Approvals",
-    fields:[{k:"Provider",v:"core.approvals"},{k:"Requested by",v:"Aoife Nolan"},{k:"Value",v:"€14,280"},{k:"Record",v:"PO-4471"}],
-    history:[{when:"Today 08:54",text:"Aoife Nolan raised the request"},{when:"Today 08:54",text:"Routed to Martin Kilbride — over threshold"}]},
-  sync:{kind:"Alert", importance:"critical", icon:ICONS.health, age:"6h",
-    title:"Xero sync failed — expired token",
-    why:"148 invoices have been queued since 02:14. Reconnecting posts them automatically.",
-    detail:"The refresh token was last authorised on 27 February. Third failure this year; moving the connection to the service account would stop it recurring. The dispatcher retried twice before dead-lettering.",
-    actionLabel:"Reconnect", secondaryLabel:"Snooze", group:"Alerts",
-    fields:[{k:"Provider",v:"core.notifications"},{k:"Integration",v:"Xero"},{k:"Queued",v:"148 invoices"},{k:"Event",v:"core.automation.failed"}],
-    history:[{when:"Today 02:14",text:"Sync failed — invalid_grant"},{when:"Today 02:16",text:"Retried twice, then dead-lettered"}]},
-  visit:{kind:"Task", importance:"high", icon:ICONS.visits, age:"2h",
-    title:"Site visit at Ballincollig depot is unassigned",
-    why:"Scheduled for tomorrow 09:00 with no installer against it.",
-    detail:"Contributed by the site-visits module through its own inbox provider. Core never learns what a visit is — it sorts by importance and age like everything else.",
-    actionLabel:"Assign installer", secondaryLabel:"Reschedule", group:"Work",
-    fields:[{k:"Provider",v:"site-visits.unassigned"},{k:"Entity",v:"site-visits.visit"},{k:"Scheduled",v:"Tomorrow 09:00"},{k:"Status",v:"scheduled"}],
-    history:[{when:"Yesterday 16:20",text:"Visit created by Tom Walsh"},{when:"Today 07:00",text:"Flagged unassigned by the briefing job"}]},
-  auto:{kind:"Alert", importance:"normal", icon:ICONS.autos, age:"3h",
-    title:"“Overdue reminder” skipped 4 contacts",
-    why:"Four organisations have no billing email, so the send step could not run.",
-    detail:"The automation ran at 08:00 and sent six of ten reminders. Each step is recorded in automation_run_steps with its input, output and error.",
-    actionLabel:"Fix the records", secondaryLabel:"Disable step", group:"Automations",
-    fields:[{k:"Automation",v:"Overdue invoice reminder"},{k:"Run",v:"partial"},{k:"Sent",v:"6 of 10"},{k:"Failed step",v:"notify.email"}],
-    history:[{when:"Today 08:00",text:"Run completed with warnings"},{when:"Yesterday 08:00",text:"Same 4 records skipped"}]},
-  task:{kind:"Task", importance:"normal", icon:ICONS.work, age:"Thu",
-    title:"Ballincollig lease renewal closes Thursday",
-    why:"No decision recorded against the contract and the notice period is 30 days.",
-    detail:"The lease runs to 31 October. Ballincollig carried 38% of counter revenue this year; rent is 4.1% of that.",
-    actionLabel:"Open record", secondaryLabel:"Assign", group:"Work",
-    fields:[{k:"Provider",v:"core.tasks"},{k:"Due",v:"Thu 27 Aug"},{k:"Assignee",v:"Martin Kilbride"},{k:"Priority",v:"high"}],
-    history:[{when:"18 Aug",text:"Task materialised from a recurring rule"},{when:"2 Feb",text:"Contract uploaded by Aoife Nolan"}]}
+  fenwick:{kind:"Alert", importance:"critical", icon:ICONS.health, age:FV_OPS.postedDays + "d",
+    title:FENWICK.short + ": " + FV_OPS.title + " has no shortlist after " + FV_OPS.postedDays + " days",
+    why:FV_OPS.marketMatches + " market matches and " + plural(FV_OPS.applicants, "applicant") + ". Engagement on the account is down to " + FENWICK.engagement + ".",
+    detail:"Ops Watchdog flags any vacancy with no shortlist after 21 days. Oliver Grant has an open support ticket with Owen Brady. Talent Matchmaker suggests widening the search to multi-site leaders; any shortlist would be shared anonymised.",
+    actionLabel:"Open the vacancy", secondaryLabel:"Assign to Owen", group:"Alerts",
+    go:{drawer:["vacancy", FV_OPS.id]},
+    fields:[{k:"Employer",v:FENWICK.name},{k:"Vacancy",v:FV_OPS.title},{k:"Salary",v:eur(FV_OPS.salary[0]) + " to " + eur(FV_OPS.salary[1])},{k:"Raised by",v:"Ops Watchdog"}],
+    history:[{when:"Today 09:40",text:"Ops Watchdog raised the exception"},{when:"2 days ago",text:"Oliver Grant opened a support ticket"}]},
+  commission:{kind:"Approval", importance:"high", icon:ICONS.approvals, age:"1d",
+    title:"Executive commission rule (10%) awaiting your approval",
+    why:"Proposed for placements above €120,000. Offers already sent stay at 8%.",
+    detail:"Raised by Michael Tierney. At 10%, a €128,000 placement carries a €12,800 fee instead of €10,240. Approving changes the rule for new executive offers only.",
+    actionLabel:"Review in Work", secondaryLabel:"Ask Michael", group:"Approvals",
+    go:{page:"Work", tab:"approvals"},
+    fields:[{k:"Rule",v:"Executive placements"},{k:"Rate",v:"8% to 10%"},{k:"Applies to",v:"Salaries above €120,000"},{k:"Raised by",v:"Michael Tierney"}],
+    history:[{when:"Yesterday 16:10",text:"Michael Tierney proposed the rule"},{when:"Yesterday 16:10",text:"Routed to John O'Farrell for approval"}]},
+  renewals:{kind:"Task", importance:"high", icon:ICONS.work, age:"Today",
+    title:RENEWALS_30 + " memberships expire within 30 days",
+    why:"Reminders are drafted, not sent. Saltmarsh Bay Resort (6 Dec) and Alder & Oak (27 Dec) come first.",
+    detail:"Ops Watchdog drafted renewal reminders for Owen Brady to review. Saltmarsh's engagement fell to 58 after the season; Alder & Oak is likely to move up a tier.",
+    actionLabel:"Open memberships", secondaryLabel:"Assign to Owen", group:"Work",
+    go:{page:"hq.employers", tab:"memberships"},
+    fields:[{k:"Expiring",v:String(RENEWALS_30)},{k:"First",v:"Saltmarsh Bay Resort, 6 Dec"},{k:"Drafted by",v:"Ops Watchdog"},{k:"Owner",v:"Owen Brady"}],
+    history:[{when:"Today 08:00",text:"Renewal reminders drafted"},{when:"4 days ago",text:"Saltmarsh raised renewal questions"}]},
+  verification:{kind:"Alert", importance:"high", icon:ICONS.people, age:"5d+",
+    title:num(MARKET.verificationBacklog) + " profiles awaiting verification",
+    why:VERIFY_OLD + " are older than the 5-day target, mostly qualifications waiting on issuers.",
+    detail:"Issuer checks in this demo are simulated. The Verification Agent routes requests and chases referees but never marks a fact as verified; Yasmin Haddad's team clears the manual queue.",
+    actionLabel:"Open verification", secondaryLabel:"Assign to Yasmin", group:"Alerts",
+    go:{page:"hq.talent", tab:"verification"},
+    fields:[{k:"Waiting",v:num(MARKET.verificationBacklog)},{k:"Over 5 days",v:String(VERIFY_OLD)},{k:"Owner",v:"Yasmin Haddad"},{k:"Agent",v:"Verification Agent"}],
+    history:[{when:"Today 09:05",text:"71 checks sent to issuers (simulated)"},{when:"Today 08:35",text:"One issuer not connected, moved to the manual queue"}]},
+  invoice:{kind:"Alert", importance:"normal", icon:ICONS.insights, age:"6d",
+    title:"Cedarhouse placement invoice overdue: " + eur(CEDAR_PL.salary * CEDAR_PL.feeRate),
+    why:pctRate(CEDAR_PL.feeRate) + " of " + eur(CEDAR_PL.salary) + " for the Accommodation Manager placement at Cedarhouse Galway.",
+    detail:candName(CEDAR_PL.candidateId) + " started on " + CEDAR_PL.startDate + ". Michael Tierney is following up and the support ticket is waiting on the employer. Payment processing is not connected in this demo.",
+    actionLabel:"Open placements", secondaryLabel:"Snooze", group:"Alerts",
+    go:{page:"hq.roles", tab:"placements"},
+    fields:[{k:"Employer",v:"Cedarhouse Hotels"},{k:"Fee",v:eur(CEDAR_PL.salary * CEDAR_PL.feeRate)},{k:"Rate",v:pctRate(CEDAR_PL.feeRate)},{k:"Owner",v:"Michael Tierney"}],
+    history:[{when:"6 days ago",text:"Invoice fell overdue"},{when:"Today",text:"Michael Tierney followed up"}]}
 };
-const ORDER = ["sync","po","visit","auto","task"];
+const ORDER = ["fenwick","commission","renewals","verification","invoice"];
 
-const ANSWERS = {
-  credit:{tool:"core_search", effect:"read",
-    text:"Three organisations are over their agreed limit this morning, and €41.2k of the balance is past 60 days. Dunne & Sons is the one to act on: days-to-pay went from 12 to 74 since May while order volume held steady.",
-    cols:["Organisation","Balance","Over","Oldest"],
-    rows:[["Dunne & Sons","€28,410","€8,410","74d"],["Fitzgerald Heating","€9,240","€2,240","63d"],["Riverside Devs","€3,560","€560","61d"]],
-    actions:[["Draft chase emails",1],["Open Dunne & Sons",0]]},
-  jobs:{tool:"core_tasks_find", effect:"read",
-    text:"Eleven tasks are past their due date. Two slipped on Friday when Van 04 went off the road at Ballincollig; the other nine are waiting on stock. Ballincollig carries seven of the eleven, well above its usual share.",
-    cols:["Task","Subject","Late","Owner"],
-    rows:[["Boiler swap follow-up","Ó Riain, Glanmire","4d","S. Byrne"],["Bathroom fit sign-off","Casey Builders","3d","T. Walsh"],["Rad replace invoice","Kelleher, Cobh","2d","S. Byrne"]],
-    actions:[["Reassign the two van tasks",1],["Open Work → Overdue",0]]},
-  chase:{tool:"core_email_draft", effect:"write", confirm:true,
-    confirmSummary:"Send one chase email to accounts@dunneandsons.ie referencing INV-10428 (€28,410, 74 days), offering two instalments to 30 September.",
-    text:"Drafted. This is a write tool, so I have not sent it — the proposal is stored with a hash of the exact arguments, and confirming replays those stored arguments rather than anything from your yes.",
-    actions:[["Confirm and send",1],["Edit draft",0]]},
-  sync:{tool:"core_operations_health", effect:"read",
-    text:"The Xero connection failed at 02:14 with an expired refresh token — last authorised 27 February. Nothing was lost: 148 invoices are queued and post once reconnected. This is the third token failure this year, so it is worth moving the connection to the service account.",
-    actions:[["Open System health",1],["Assign to Aoife",0]]},
-  visits:{tool:"site_visits_find", effect:"read",
-    text:"Four site visits are booked this week and one has no installer against it. That tool is contributed by the site-visits module, not core — installing the module is what gave me the ability to answer this.",
-    cols:["Visit","Organisation","When","Status"],
-    rows:[["Boiler service","Casey Builders","Wed 09:00","scheduled"],["Survey","Ó Riain","Wed 14:00","scheduled"],["Depot check","Ballincollig","Thu 09:00","unassigned"]],
-    actions:[["Assign the unassigned visit",1],["Open Site visits",0]]},
-  fallback:{tool:"core_search", effect:"read",
-    text:"I can answer that from the records you have access to. Everything I reach goes through a registered tool with a declared permission — there is no SQL tool — and a record you may not see comes back as not found rather than forbidden.",
-    actions:[["Show me what you can do",0]]}
-};
+/* ---- Recruit Assistant: scripted answers built from the fixtures ----
+   Each one says it comes from demo data. Actions are [label, primary, target],
+   where target is {page, tab}, {drawer:[kind, id]} or {ask}. ctx carries the
+   shared store's live lists so answers follow changes made in the portals. */
+const DEMO = "From the demo data: ";
+const SCRIPTED_QUESTIONS = [
+  "Which vacancies need attention?",
+  "Where are employers spending the most?",
+  "Show our membership performance.",
+  "Which candidates are awaiting verification?",
+  "How close are we to our talent network target?"
+];
+function vacancyAnswer(ctx){
+  const open = ((ctx && ctx.vacancies) || VACANCIES).filter(v => v.status === "open").slice().sort((a, b) => b.postedDays - a.postedDays);
+  const lead = open[0];
+  if (!lead) return {tool:"marketplace.vacancies.search", effect:"read", text:DEMO + "there are no open vacancies in the sample right now.",
+    actions:[["Open all vacancies", 1, {page:"hq.roles", tab:"vacancies"}]]};
+  const stale = open.filter(v => v.postedDays > 14).length;
+  return {tool:"marketplace.vacancies.search", effect:"read",
+    text:DEMO + lead.title + " at " + EMPLOYER_BY_ID[lead.employerId].name + " is the one to act on: " + lead.postedDays + " days open, "
+      + lead.marketMatches + " market matches and " + plural(lead.applicants, "applicant") + ". " + stale + " of the " + open.length
+      + " sample roles are older than 14 days; these are the oldest. Ops Watchdog flags any role with no shortlist after 21 days.",
+    cols:["Vacancy","Employer","Days open","Applicants"],
+    rows:open.slice(0, 4).map(v => [v.title, empShort(v.employerId), String(v.postedDays), String(v.applicants)]),
+    actions:[["Open the vacancy", 1, {drawer:["vacancy", lead.id]}], ["Open all vacancies", 0, {page:"hq.roles", tab:"vacancies"}]]};
+}
+function spendAnswer(){
+  const list = EMPLOYERS.slice().sort((a, b) => b.spendYtd - a.spendYtd);
+  const total = list.reduce((t, e) => t + e.spendYtd, 0);
+  const top3 = list.slice(0, 3).reduce((t, e) => t + e.spendYtd, 0);
+  const a = list[0], b = list[1];
+  return {tool:"revenue.employers.rank", effect:"read",
+    text:DEMO + a.name + " leads year-to-date spend at " + eur(a.spendYtd) + " across " + plural(a.placementsYtd, "placement") + ", ahead of "
+      + b.name + " at " + eur(b.spendYtd) + ". The top three accounts make up " + pctOf(top3, total) + " of the " + eur(total)
+      + " tracked across the " + list.length + " sample employers.",
+    cols:["Employer","Spend YTD","Placements","Tier"],
+    rows:list.slice(0, 4).map(e => [e.name, eur(e.spendYtd), String(e.placementsYtd), tierLabel(e.tier)]),
+    actions:[["Open " + a.short, 1, {drawer:["employer", a.id]}], ["Open revenue overview", 0, {page:"hq.revenue", tab:"overview"}]]};
+}
+function membershipAnswer(ctx){
+  const tiers = (ctx && ctx.tiers) || TIERS;
+  const revenue = membershipRevenue(tiers), accounts = totalAccounts(tiers);
+  const best = tiers.slice().sort((x, y) => y.price * y.accounts - x.price * x.accounts)[0];
+  return {tool:"revenue.memberships.summary", effect:"read",
+    text:DEMO + "memberships bring in " + eur(revenue) + " a year across " + num(accounts) + " employer accounts, simulated and annualised, an average of "
+      + eur(revenue / accounts) + ". " + best.label + " earns the most at " + eur(best.price * best.accounts)
+      + ". Starter, Growth and Enterprise prices came from John; Professional and Group are concept assumptions.",
+    cols:["Tier","Accounts","Price","Annual"],
+    rows:tiers.map(t => [t.label + " · " + t.band, num(t.accounts), eur(t.price), eur(t.price * t.accounts)]),
+    actions:[["Open memberships", 1, {page:"hq.revenue", tab:"memberships"}], ["Open pricing settings", 0, {page:"Settings", tab:"pricing"}]]};
+}
+function verificationAnswer(){
+  const days = (s) => parseInt(s, 10) || 0;
+  const q = VERIFICATION_QUEUE.slice().sort((a, b) => days(b.age) - days(a.age)).slice(0, 4);
+  return {tool:"talent.verification.queue", effect:"read",
+    text:DEMO + num(MARKET.verificationBacklog) + " profiles are waiting on verification and " + VERIFY_OLD
+      + " are older than the 5-day target. These are the oldest items in the sample queue. The Verification Agent routes requests and chases referees, but it never marks a fact as verified.",
+    cols:["Candidate","Item","Age","Status"],
+    rows:q.map(r => [candName(r.candidateId), r.item, r.age, r.status]),
+    actions:[["Open the verification queue", 1, {page:"hq.talent", tab:"verification"}], ["Open " + candName(q[0].candidateId), 0, {drawer:["candidate", q[0].candidateId]}]]};
+}
+function targetAnswer(){
+  const t = MARKET.talentTarget;
+  return {tool:"talent.network.progress", effect:"read",
+    text:DEMO + num(MARKET.registeredProfessionals) + " professionals are registered against John's target of " + num(t) + ", so the target is passed by "
+      + num(MARKET.registeredProfessionals - t) + ". " + num(MARKET.verifiedProfiles) + " profiles are verified, " + pctOf(MARKET.verifiedProfiles, t)
+      + " of the target, and " + num(MARKET.discoverableCandidates) + " are discoverable to employers.",
+    cols:["Measure","Profiles","Of target","This month"],
+    rows:[["Registered", num(REG[11]), pctOf(REG[11], t), signed(lastDelta(REG))],
+      ["Verified", num(VER[11]), pctOf(VER[11], t), signed(lastDelta(VER))],
+      ["Discoverable", num(DISC[11]), pctOf(DISC[11], t), signed(lastDelta(DISC))],
+      ["Awaiting verification", num(MARKET.verificationBacklog), pctOf(MARKET.verificationBacklog, t, 1), VERIFY_OLD + " over 5 days"]],
+    actions:[["Open talent overview", 1, {page:"hq.talent", tab:"overview"}], ["Open the growth dashboard", 0, {page:"Dashboard", tab:"growth"}]]};
+}
+function commissionAnswer(ctx){
+  const rules = (ctx && ctx.commissionRules) || COMMISSION_RULES;
+  const rate = (id, fb) => pctRate((rules.find(r => r.id === id) || {rate:fb}).rate);
+  return {tool:"revenue.commissions.rules", effect:"read",
+    text:DEMO + "the standard success fee is " + rate("cr1", 0.08) + " of first-year salary, against a " + pctRate(MARKET.agencyBenchmarkRate)
+      + " agency benchmark. Two changes are proposed: " + rate("cr2", 0.07) + " for employers with six or more placements a year, and "
+      + rate("cr3", 0.1) + " for executive placements above €120,000, which is waiting on your approval.",
+    cols:["Rule","Rate","Applies to","Status"],
+    rows:rules.map(r => [r.label, pctRate(r.rate), r.applies, r.note]),
+    actions:[["Review the approval", 1, {page:"Work", tab:"approvals"}], ["Open commissions", 0, {page:"hq.revenue", tab:"commissions"}]]};
+}
+function invoiceAnswer(ctx){
+  const pls = (ctx && ctx.placements) || PLACEMENTS;
+  const fee = (p) => p.salary * p.feeRate;
+  const rank = {overdue:0, invoiced:1, pending:2, paid:3};
+  const list = pls.slice().sort((a, b) => (rank[a.invoice] - rank[b.invoice]) || fee(b) - fee(a));
+  const count = (s) => pls.filter(p => p.invoice === s).length;
+  const over = pls.filter(p => p.invoice === "overdue");
+  return {tool:"revenue.placements.invoices", effect:"read",
+    text:DEMO + plural(pls.length, "sample placement") + " carry " + eur(pls.reduce((t, p) => t + fee(p), 0)) + " in success fees: "
+      + count("paid") + " paid, " + count("invoiced") + " invoiced, " + count("pending") + " pending and " + count("overdue") + " overdue."
+      + (over.length ? " The overdue fee is " + EMPLOYER_BY_ID[over[0].employerId].name + " at " + eur(fee(over[0])) + ", " + pctRate(over[0].feeRate)
+        + " of " + eur(over[0].salary) + "." : "")
+      + " Payment processing is not connected, so nothing is collected in this demo.",
+    cols:["Placement","Employer","Fee","Invoice"],
+    rows:list.slice(0, 4).map(p => [candName(p.candidateId), empShort(p.employerId), eur(fee(p)), cap(p.invoice)]),
+    actions:[["Open placements", 1, {page:"hq.roles", tab:"placements"}], ["Open Cedarhouse Hotels", 0, {drawer:["employer", "e-cedarhouse"]}]]};
+}
+function fallbackAnswer(){
+  return {tool:"assistant.help", effect:"read",
+    text:"Recruit Assistant answers from Recruit's demo data, so it covers a set of scripted questions for now. Pick one of these and the answer is built from the same records every portal uses.",
+    actions:SCRIPTED_QUESTIONS.map((q, i) => [q, i === 0 ? 1 : 0, {ask:q}])};
+}
+const ANSWERS = {vacancies:vacancyAnswer, spend:spendAnswer, membership:membershipAnswer, verification:verificationAnswer,
+  target:targetAnswer, commission:commissionAnswer, invoices:invoiceAnswer, fallback:fallbackAnswer};
 
-// Turns a plain-English filter name into a full dashboard area — the "primitive
-// vibe-coding" bit: no real backend, just a seeded generator so the same phrase
-// always produces the same numbers, with direction and vocabulary nudged by
-// keywords in the text (expansion/growth trends up, risk/issue trends down, a
-// region/cost/people/ops/customer word picks which metrics show).
+function pickAnswer(q, ctx){
+  const s = (q || "").toLowerCase();
+  if (/commission|success fee|fee rule|executive rate|10%/.test(s)) return commissionAnswer(ctx);
+  if (/invoice|overdue|payment|paid\b/.test(s)) return invoiceAnswer(ctx);
+  if (/verif|credential|backlog|issuer|referee/.test(s)) return verificationAnswer(ctx);
+  if (/target|network|100,000|100000|how close|registered/.test(s)) return targetAnswer(ctx);
+  if (/membership|tier|subscription|renewal|pricing|price/.test(s)) return membershipAnswer(ctx);
+  if (/spend|biggest|top employer|most valuable|revenue by/.test(s)) return spendAnswer(ctx);
+  if (/vacanc|role|shortlist|attention|stuck|fenwick|hiring|pipeline/.test(s)) return vacancyAnswer(ctx);
+  return fallbackAnswer();
+}
+
+// Turns a plain-English filter name into a full dashboard area: no real
+// backend, just a seeded generator so the same phrase always produces the
+// same numbers, with direction and vocabulary nudged by keywords in the text.
 function synthesizeCustomArea(name){
   const trimmed = (name || "").trim();
   if (!trimmed) return null;
@@ -547,316 +752,369 @@ function synthesizeCustomArea(name){
   const rnd = (n) => (((seed >>> (n % 24)) ^ (seed << ((n * 7) % 13))) >>> 0) % 997 / 997;
   const low = trimmed.toLowerCase();
   const has = (...words) => words.some(w => low.indexOf(w) > -1);
-  const growth = has("expansion","growth","launch","scale","pilot","new site","open","opening","grow");
-  const risk = has("risk","issue","delay","problem","complaint","fault","incident","churn","decline");
-  const dir = risk ? -1 : (growth ? 1 : (rnd(2) > 0.45 ? 1 : -1));
+  const up = has("growth","launch","scale","pilot","campaign","week","new","expansion","grow");
+  const risk = has("risk","issue","delay","overdue","churn","decline","stuck","late","backlog");
+  const dir = risk ? -1 : (up ? 1 : (rnd(2) > 0.45 ? 1 : -1));
 
   let vocab = "generic";
-  if (has("scotland","ireland","wales","england","region","dublin","belfast","cork","galway","london","glasgow","edinburgh"))
+  if (has("dublin","galway","munster","leinster","connacht","ulster","london","uk","ireland","kerry","clare","wicklow","region"))
     vocab = "region";
-  else if (has("cost","spend","budget","saving","margin")) vocab = "cost";
-  else if (has("staff","hiring","team","recruit","headcount")) vocab = "people";
-  else if (has("supplier","stock","inventory","warehouse","fleet")) vocab = "ops";
-  else if (has("customer","client","retention","account")) vocab = "customer";
+  else if (has("cost","spend","budget","saving","fee","revenue","margin")) vocab = "cost";
+  else if (has("candidate","talent","professional","graduate","student","career")) vocab = "people";
+  else if (has("verification","verify","credential","issuer","reference","queue")) vocab = "ops";
+  else if (has("employer","hotel","restaurant","retail","event","member","renewal","account")) vocab = "customer";
 
   const V = {
-    region:   {labels:["New enquiries","Orders won","Revenue","Site coverage"], unit:"EUR — 30 DAYS"},
-    cost:     {labels:["Spend","Cost per job","Savings found","Budget used"], unit:"EUR — 30 DAYS"},
-    people:   {labels:["Headcount","Open roles","Time to hire","Retention"], unit:"PEOPLE"},
-    ops:      {labels:["Stock cover","Lead time","Stockouts","Reorders raised"], unit:"DAYS"},
-    customer: {labels:["Active accounts","Repeat rate","Churn","NPS"], unit:"ACCOUNTS"},
-    generic:  {labels:["Volume","Rate","Cost","Coverage"], unit:"ACTIVITY — 30 DAYS"}
+    region:   {labels:["Sign-ups","Open roles","Placements","Coverage"], unit:"30 DAYS"},
+    cost:     {labels:["Fees","Cost per hire","Saving vs agency","Budget used"], unit:"EUR · 30 DAYS"},
+    people:   {labels:["Professionals","Verified","Time to shortlist","Retention"], unit:"PROFILES"},
+    ops:      {labels:["Checks waiting","Turnaround","Exceptions","Checks sent"], unit:"CHECKS"},
+    customer: {labels:["Active employers","Renewal rate","Churn","Engagement"], unit:"ACCOUNTS"},
+    generic:  {labels:["Volume","Rate","Cost","Coverage"], unit:"ACTIVITY · 30 DAYS"}
   }[vocab];
 
-  const months = ["Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug"];
   let v0 = 40 + Math.floor(rnd(1) * 220);
-  const chart = months.map((m, i) => {
+  const chart = MONTHS.map((m, i) => {
     v0 = Math.max(8, Math.round(v0 * (1 + dir * (0.03 + rnd(i + 3) * 0.07))));
     return [m, v0, String(v0)];
   });
   const metrics = V.labels.map((label, i) => {
     const val = 20 + Math.floor(rnd(i + 5) * 400);
     const pct = 2 + Math.round(rnd(i + 9) * 18);
-    const up = dir > 0 ? rnd(i + 12) > 0.25 : rnd(i + 12) > 0.7;
+    const isUp = dir > 0 ? rnd(i + 12) > 0.25 : rnd(i + 12) > 0.7;
     const bars = [0,1,2,3,4,5,6,7,8].map(k => 0.3 + rnd(i * 3 + k) * 0.7);
-    return [label, i === 1 ? pct + "%" : String(val), (up ? "+" : "\u2212") + pct + (i === 1 ? "pt" : "%"), up ? "up" : "down", "vs last month", bars];
+    return [label, i === 1 ? pct + "%" : String(val), (isUp ? "+" : MINUS) + pct + (i === 1 ? "pt" : "%"), isUp ? "up" : "down", "vs last month", bars];
   });
   const capName = trimmed.replace(/\b\w/g, c => c.toUpperCase());
   const split = [
-    [capName + " \u2014 direct", String(Math.round(v0 * 0.5)), "48%", 1],
+    [capName + ": direct", String(Math.round(v0 * 0.5)), "48%", 1],
     ["Existing pipeline", String(Math.round(v0 * 0.3)), "31%", 0],
     ["Everything else", String(Math.round(v0 * 0.2)), "21%", 0]
   ];
-  const table = [1,2,3].map(w => [capName + " \u2014 week " + w, String(20 + Math.floor(rnd(20 + w) * 200)),
-    (dir > 0 ? "+" : "\u2212") + (3 + Math.floor(rnd(23 + w) * 14)) + "%", "Auto-tagged from records mentioning \u201c" + low + "\u201d"]);
-  table.push(["Everything else", String(20 + Math.floor(rnd(30) * 200)), "\u2014", "Baseline"]);
+  const table = [1,2,3].map(w => [capName + ", week " + w, String(20 + Math.floor(rnd(20 + w) * 200)),
+    (dir > 0 ? "+" : MINUS) + (3 + Math.floor(rnd(23 + w) * 14)) + "%", "Tagged from records mentioning “" + low + "”"]);
+  table.push(["Everything else", String(20 + Math.floor(rnd(30) * 200)), "+0%", "Baseline"]);
   return {
     id: trimmed, label: capName, color: "var(--accent)", owner: "CUSTOM FILTER",
-    description: "Generated from \u201c" + trimmed + "\u201d \u2014 a plain-English filter, not a registered metric set. Refine it and Pulse will tighten this up.",
+    description: "Generated from “" + trimmed + "”, a plain-English filter over demo data, not a registered metric set.",
     kind: "columns", chartTitle: capName + " over time", chartUnit: V.unit,
-    chart, splitTitle: "Where \u201c" + low + "\u201d shows up", split,
+    chart, splitTitle: "Where “" + low + "” shows up", split,
     tableCols: ["Item","Value","Change","Note"], table,
     metrics, legend: [capName, "Pipeline", "Other"]
   };
 }
 
-function pickAnswer(q){
-  const s = q.toLowerCase();
-  if (/visit|site visit|installer/.test(s)) return ANSWERS.visits;
-  if (/chase|email|draft|send/.test(s)) return ANSWERS.chase;
-  if (/credit|limit|debtor|owe|outstanding|dunne/.test(s)) return ANSWERS.credit;
-  if (/task|late|overdue|slip|work/.test(s)) return ANSWERS.jobs;
-  if (/sync|xero|integration|token|fail|broke|health/.test(s)) return ANSWERS.sync;
-  return ANSWERS.fallback;
-}
+const ORGS = EMPLOYERS.map(e => [e.name, e.sector, eur(e.spendYtd), tierLabel(e.tier), e.health]);
+const TEAMS = HQ_TEAMS.map(t => [t.name, t.members + (t.members === 1 ? " member" : " members"), t.lead, t.remit]);
+const LOCATIONS = [["Dublin HQ", ORG.location, TEAM_SIZE + " people across " + HQ_TEAMS.length + " teams", "active"]];
 
-const ORGS = [
-  ["Dunne & Sons Ltd","Customer","€28,410","74 days","on stop"],
-  ["Casey Builders","Customer","€6,120","12 days","active"],
-  ["Fitzgerald Heating","Customer","€9,240","63 days","watch"],
-  ["Munster Plumbing Supplies","Supplier","—","—","active"],
-  ["Riverside Developments","Customer","€3,560","61 days","watch"],
-  ["Glanmire Mechanical","Customer","€1,180","8 days","active"]
-];
-const TEAMS = [
-  ["Accounts","3 members","Aoife Nolan","core:approval:decide"],
-  ["Installers","9 members","Séamus Byrne","core:task:update"],
-  ["Trade counter","6 members","Niamh Cronin","core:person:view"],
-  ["Management","2 members","Martin Kilbride","all core permissions"]
-];
-const LOCATIONS = [
-  ["Head office","Little Island, Cork","14 staff","active"],
-  ["Ballincollig depot","Ballincollig, Cork","14 staff","lease review"],
-  ["Mallow yard","Mallow, Cork","4 staff","active"]
-];
-
+/* ---- agents: the eight Recruit agents and one group thread ----
+   Names, shapes, tints, states and roles come from RECRUIT_AGENTS. Agents
+   propose and wait for a person; none of them acts outside Recruit. */
+const fromAgent = (id, extra) => {
+  const a = agentById(id);
+  return Object.assign({id, name:a.name, shape:a.shape, tint:a.tint, state:a.state, role:a.role}, extra);
+};
 const AGENT_DEFS = [
-  {id:"close", name:"Month-end close", shape:"rim-capsule", tint:"#1b2430", state:"working", group:true,
-   members:["credit","briefing","ops"], role:"Credit Control, Briefing and Ops Watchdog working the same close",
-   when:"09:12", preview:"credit control: three accounts still open.",
+  fromAgent("briefing", {when:"07:00", preview:MARKET.placementsThisMonth + " placements this month. two things need you.",
    thread:[
-     {kind:"stamp", text:"Today 09:04"},
-     {kind:"routine", text:"Ran routine", routine:"Month-end close"},
-     {kind:"agent", from:"credit", text:"three accounts are still open on the August ledger. Dunne & Sons is the only one that changed behaviour rather than just running late."},
-     {kind:"agent", from:"ops", text:"nothing technical is holding it up — the Xero token is back and all 148 queued invoices posted at 09:02."},
-     {kind:"agent", from:"briefing", text:"so the close is one decision, not three: what to do about Dunne. everything else reconciles."},
-     {kind:"user", text:"instalments, two payments to end of september"},
-     {kind:"agent", from:"credit", text:"drafted on those terms and parked it. sending is a write tool, so it waits for your yes."},
-     {kind:"agent", from:"briefing", text:"once that goes, August closes. i'll put the confirmation in tomorrow's briefing."}
-   ]},
-  {id:"briefing", name:"Briefing", shape:"crown-pebble", tint:"#191c1f", state:"complete", role:"Reads the whole business every morning and tells you the two things that matter",
-   when:"08:02", preview:"three things moved overnight. two need you.",
-   thread:[
-     {kind:"stamp", text:"Today 08:00"},
+     {kind:"stamp", text:"Today 07:00"},
      {kind:"routine", text:"Ran routine", routine:"Morning briefing"},
      {kind:"agent", text:"morning briefing:", lines:[
-       {k:"Cash", v:"€41.2k past 60 days · Dunne & Sons is 74 days"},
-       {k:"Work", v:"11 tasks late · 7 of them at Ballincollig"},
-       {k:"Approvals", v:"PO-4471 sitting with you since 08:54"}]},
-     {kind:"agent", text:"two things need you today: the purchase order, and a yes/no on the Ballincollig lease. everything else is covered."},
-     {kind:"user", text:"put the lease on Thursday"},
-     {kind:"agent", text:"done — task created against Ballincollig depot, due Thursday, assigned to you. i'll remind you Wednesday afternoon."}
-   ]},
-  {id:"credit", name:"Credit Control", shape:"executive-capsule", tint:"#2a2118", state:"waiting", role:"Watches payment behaviour and drafts the chase before you ask",
-   when:"Yesterday", preview:"three drafts parked. nothing sent.",
+       {k:"Placements", v:MARKET.placementsThisMonth + " this month, up from " + PLC[10]},
+       {k:"Revenue", v:eur(FEE[11]) + " in success fees · memberships " + eur(MEMBERSHIP_ANNUAL) + " a year (simulated)"},
+       {k:"Network", v:num(MARKET.registeredProfessionals) + " registered · " + num(MARKET.verifiedProfiles) + " verified · target passed"},
+       {k:"Exception", v:"Fenwick & Vale's Operations Director, " + FV_OPS.postedDays + " days without a shortlist"}]},
+     {kind:"agent", text:"two things need you today: the 10% executive commission rule, and whether we widen Fenwick's search. everything else is moving."},
+     {kind:"user", text:"put fenwick on owen's list for this morning"},
+     {kind:"agent", text:"done. task created against Fenwick & Vale Hospitality for Owen Brady, due today. i'll check on it in tomorrow's briefing."}
+   ]}),
+  fromAgent("ops", {when:"09:40", preview:"fenwick's operations director: " + FV_OPS.postedDays + " days, no shortlist.",
    thread:[
-     {kind:"stamp", text:"Yesterday 16:40"},
-     {kind:"agent", text:"three accounts changed behaviour this week. i've drafted a chase for each and parked them — sending is a write tool, so they wait for you."},
-     {kind:"user", text:"what changed on dunne"},
-     {kind:"agent", text:"days-to-pay went 12 → 74 since May while order volume held steady. that pattern is a cash problem, not a dispute. i'd offer two instalments to 30 September before putting them on stop again."}
-   ]},
-  {id:"visits", name:"Visit Scout", shape:"low-dome", tint:"#241b2e", state:"working", role:"Keeps the site-visit board honest and chases unassigned work",
-   when:"Yesterday", preview:"thursday's depot check still has nobody on it.",
+     {kind:"stamp", text:"Today 09:40"},
+     {kind:"routine", text:"Ran routine", routine:"Vacancy exception watch"},
+     {kind:"agent", text:"five exceptions this run:", lines:[
+       {k:"Vacancy", v:FV_OPS.title + " · Fenwick & Vale · " + FV_OPS.postedDays + " days, no shortlist"},
+       {k:"Renewals", v:RENEWALS_30 + " memberships expire in the next 30 days"},
+       {k:"Verification", v:VERIFY_OLD + " checks older than 5 days"},
+       {k:"Offer", v:"Declan Murphy's contingency offer is waiting on Deirdre Foley"},
+       {k:"Invoice", v:"Cedarhouse placement fee overdue · " + eur(CEDAR_PL.salary * CEDAR_PL.feeRate)}]},
+     {kind:"agent", text:"fenwick is the one to act on: " + FV_OPS.marketMatches + " market matches, one applicant, and engagement down to " + FENWICK.engagement + ". i've drafted a note to Oliver Grant suggesting we widen to multi-site leaders. it waits for a person to send it."},
+     {kind:"user", text:"who would we suggest"},
+     {kind:"agent", text:"talent matchmaker's top three: Ciarán O'Brien, Siobhán Doherty and Patrick Healy, all with 20 or more years and multi-site or general manager experience. they would go to Fenwick anonymised until each one agrees to an introduction."}
+   ]}),
+  fromAgent("profile", {when:"09:52", preview:agentById("profile").runsToday + " cvs structured today. 312 missing salary expectations.",
    thread:[
-     {kind:"stamp", text:"Yesterday 07:00"},
-     {kind:"agent", text:"four visits booked this week, one unassigned: Thursday 09:00 depot stock check. Séamus is the only installer free that morning."},
-     {kind:"user", text:"give it to séamus"},
-     {kind:"agent", text:"assigned. the module fired site-visits.visit.updated and the escalation automation stood down."}
-   ]},
-  {id:"stock", name:"Stock Watch", shape:"control-cube", tint:"#16241f", state:"thinking", role:"Reorder points, supplier lead times and what Thursday's jobs actually need",
-   when:"Mon", preview:"two lines below reorder point before thursday.",
+     {kind:"stamp", text:"Today 09:52"},
+     {kind:"routine", text:"Ran routine", routine:"CV structuring"},
+     {kind:"agent", text:"a new CV is now a profile draft:", lines:[
+       {k:"Timeline", v:"Career history structured"},
+       {k:"Evidence", v:"4 items to verify"},
+       {k:"Status", v:"Self-reported until checked"}]},
+     {kind:"agent", text:agentById("profile").runsToday + " CVs structured today. 312 profiles still have no salary expectation, which weakens matching. i can draft a nudge for those candidates."},
+     {kind:"user", text:"draft it, don't send"},
+     {kind:"agent", text:"drafted and parked in Work. it goes nowhere until someone on Leah's team sends it."}
+   ]}),
+  fromAgent("match", {when:"09:31", preview:"18 profiles ranked for harbourview's general manager.",
    thread:[
-     {kind:"stamp", text:"Monday 11:20"},
-     {kind:"agent", text:"two lines drop below reorder point before Thursday's jobs. Munster can cover both at the June agreement price — that's what PO-4471 is."}
-   ]},
-  {id:"ops", name:"Ops Watchdog", shape:"shield", tint:"#2b1b1e", state:"attention", role:"Sits on the event queue and tells you when something stopped working",
-   when:"02:16", preview:"xero token expired. 148 invoices queued, nothing lost.",
+     {kind:"stamp", text:"Today 09:31"},
+     {kind:"routine", text:"Ran routine", routine:"Rank relevant profiles"},
+     {kind:"agent", text:"General Manager at Harbourview Grand Hotel, re-ranked:", lines:[
+       {k:"Ranked", v:"18 relevant profiles"},
+       {k:"Pipeline", v:"Sarah Kavanagh and Declan Murphy at offer · Tomás Ryan at second interview"},
+       {k:"New", v:"Lucia Ferreira suggested for Hotel Manager at Fenwick Dublin"}]},
+     {kind:"agent", text:"every suggestion shows its evidence and the points that need the employer's judgement. i don't reject anyone and i don't decide."},
+     {kind:"user", text:"why lucia for fenwick"},
+     {kind:"agent", text:"lifestyle brand experience: a 96% brand audit and a 9.3 guest score at a Lisbon design hotel, four languages, and she is relocating to Dublin. notice period and relocation timing need a conversation."}
+   ]}),
+  fromAgent("value", {when:"08:15", preview:"1,120 market ranges refreshed. all labelled estimates.",
    thread:[
-     {kind:"stamp", text:"Today 02:16"},
-     {kind:"agent", text:"the Xero connection failed at 02:14 — invalid_grant, token last authorised 27 February. 148 invoices are queued and post on reconnect. third time this year; move it to the service account."}
-   ]},
-  {id:"counter", name:"Counter Assistant", shape:"offset-pebble", tint:"#191c1f", state:"working", role:"Answers trade-counter questions on price, stock and account status",
-   when:"Fri", preview:"14 questions answered, 2 handed to niamh.",
+     {kind:"stamp", text:"Today 08:15"},
+     {kind:"routine", text:"Ran routine", routine:"Market range refresh"},
+     {kind:"agent", text:"nightly refresh done:", lines:[
+       {k:"Profiles", v:"1,120 re-estimated"},
+       {k:"Benchmark", v:"Deputy GM salaries in Dublin up 3% this quarter"},
+       {k:"Label", v:"Every figure shown as an estimate"}]},
+     {kind:"user", text:"what does that mean for aoife"},
+     {kind:"agent", text:"Aoife Byrne's estimated range is " + eur(CANDIDATE_BY_ID["c-aoife"].marketRange[0]) + " to " + eur(CANDIDATE_BY_ID["c-aoife"].marketRange[1]) + " for her current level in Dublin. it's an estimate from illustrative benchmarks, not a guarantee, and it says so wherever she sees it."}
+   ]}),
+  fromAgent("path", {when:"07:30", preview:"hospitality to events moves are up this quarter.",
    thread:[
-     {kind:"stamp", text:"Friday 17:30"},
-     {kind:"agent", text:"14 counter questions answered this week. two went to Niamh: both were credit-limit calls, which i won't make on my own."}
+     {kind:"stamp", text:"Today 07:30"},
+     {kind:"routine", text:"Ran routine", routine:"Career explorer reports"},
+     {kind:"agent", text:"640 career explorer reports updated:", lines:[
+       {k:"Strongest move", v:"Hotel events to live events operations"},
+       {k:"Example", v:"Mark Doyle · Events Operations Director at 86% alignment"},
+       {k:"Gap to close", v:"Festival-scale safety and production suppliers"}]},
+     {kind:"agent", text:"hospitality to events moves are up this quarter. worth featuring in Career change week. i suggest options; i don't predict outcomes."},
+     {kind:"user", text:"which course closes mark's gap"},
+     {kind:"agent", text:"the " + COURSE_BY_ID["crs-events"].title + " from Corrib Hospitality Academy: 12 weeks part-time with two live-event placements, " + eur(COURSE_BY_ID["crs-events"].price) + " before the " + pctRate(COURSE_BY_ID["crs-events"].memberDiscount) + " member discount. Corrib is a concept partner and nothing is signed."}
+   ]}),
+  fromAgent("verify", {when:"09:05", preview:"71 sent to issuers. 25 waiting on documents.",
+   thread:[
+     {kind:"stamp", text:"Today 09:05"},
+     {kind:"routine", text:"Ran routine", routine:"Verification chase"},
+     {kind:"agent", text:"this run:", lines:[
+       {k:"Sent", v:"71 checks to issuers (simulated)"},
+       {k:"Waiting", v:"25 on candidate documents"},
+       {k:"Manual queue", v:"Universidade do Tejo not connected · Lucia Ferreira's MSc"}]},
+     {kind:"agent", text:num(MARKET.verificationBacklog) + " profiles are waiting overall and " + VERIFY_OLD + " are older than 5 days. i can chase and route, but i never mark anything verified. that takes a confirmation or a person."},
+     {kind:"user", text:"who's been waiting longest"},
+     {kind:"agent", text:"Ciarán O'Brien's reference from Parnell Square Hotel, 6 days, and Lucia Ferreira's MSc, 5 days. both are with Yasmin's team. i've drafted a second reference request for Ciarán; it waits for a yes."}
+   ]}),
+  fromAgent("growth", {when:"08:40", preview:"leeside proposal drafted. waiting for john.",
+   thread:[
+     {kind:"stamp", text:"Today 08:40"},
+     {kind:"routine", text:"Ran routine", routine:"Growth experiments"},
+     {kind:"agent", text:"two experiments drafted:", lines:[
+       {k:"Partner", v:"Student pathways proposal for Leeside College"},
+       {k:"Campaign", v:"Career change week · hospitality to events stories"},
+       {k:"Funnel", v:"Student pathways converts at 30.4% in the campaign model"}]},
+     {kind:"agent", text:"the Leeside proposal is in Work for your approval. Leeside is a proposed partner and nothing is signed; approving only lets Fergal send it."},
+     {kind:"user", text:"what referral share did we propose"},
+     {kind:"agent", text:pctRate(PARTNERS.find(p => p.id === "pt-leeside").revenueShare) + " of course fees from Recruit referrals. Liffey is at " + pctRate(PARTNERS.find(p => p.id === "pt-liffey").revenueShare) + " and Corrib at " + pctRate(PARTNERS.find(p => p.id === "pt-corrib").revenueShare) + ", both concept partners."}
+   ]}),
+  {id:"review", name:"Monday marketplace review", shape:"rim-capsule", tint:"#1b2430", state:"complete", group:true,
+   members:["briefing","ops","match"], role:"Briefing Agent, Ops Watchdog and Talent Matchmaker on the weekly review",
+   when:"Mon", preview:"talent matchmaker: three pipelines moved last week.",
+   thread:[
+     {kind:"stamp", text:"Monday 08:00"},
+     {kind:"routine", text:"Ran routine", routine:"Weekly marketplace review"},
+     {kind:"agent", from:"briefing", text:"last week: " + num(MARKET.openVacancies) + " open roles, placements on track for the month, and the talent network passed 100,000 registered professionals."},
+     {kind:"agent", from:"ops", text:"one vacancy is stuck: Fenwick & Vale's Operations Director. everything else had a shortlist inside 21 days."},
+     {kind:"agent", from:"match", text:"three pipelines moved: Harbourview's General Manager reached offer stage twice, Revenue Manager booked a first interview, and Larchfield's Deputy GM has a second interview with Aoife Byrne."},
+     {kind:"user", text:"good. keep fenwick on top until it moves"},
+     {kind:"agent", from:"ops", text:"pinned. it stays first in every briefing until a shortlist exists."},
+     {kind:"agent", from:"briefing", text:"noted for next Monday's one-pager."}
    ]}
 ];
 
+/* ---- dashboard ---- */
 const KPI_DEFS = {
-  revenue:{label:"Revenue", value:"€412,800", delta:"+6.2%", dir:"up", hint:"30 days", hero:true},
-  cash:{label:"Cash collected", value:"€368,140", delta:"+4.1%", dir:"up", hint:"30 days"},
-  overdue:{label:"Overdue debt", value:"€41,200", delta:"+€8,410", dir:"down", hint:"60 days+"},
-  margin:{label:"Gross margin", value:"31.4%", delta:"−0.6pt", dir:"down", hint:"vs last month"},
-  jobs:{label:"Jobs completed", value:"126", delta:"+4", dir:"up", hint:"30 days"},
-  nps:{label:"Repeat rate", value:"68%", delta:"+3pt", dir:"up", hint:"customers ordering again"},
-  pipeline:{label:"Open pipeline", value:"€212,400", delta:"+11%", dir:"up", hint:"quoted, not won"},
-  utilisation:{label:"Installer hours", value:"84%", delta:"−2pt", dir:"down", hint:"billable share"}
+  professionals:{label:"Registered professionals", value:num(MARKET.registeredProfessionals), delta:signed(lastDelta(REG)), dir:"up", hint:"this month", hero:true},
+  verified:{label:"Verified profiles", value:num(MARKET.verifiedProfiles), delta:signed(lastDelta(VER)), dir:"up", hint:pctOf(MARKET.verifiedProfiles, MARKET.talentTarget) + " of the 100,000 target"},
+  employers:{label:"Employer accounts", value:num(MARKET.employerAccounts), delta:signed(lastDelta(EMP)), dir:"up", hint:"paying members"},
+  roles:{label:"Open roles", value:num(MARKET.openVacancies), delta:signed(lastDelta(VAC)), dir:"up", hint:"live vacancies"},
+  placements:{label:"Placements this month", value:num(MARKET.placementsThisMonth), delta:signed(lastDelta(PLC)), dir:"up", hint:"vs last month"},
+  shortlist:{label:"Median time to shortlist", value:MARKET.medianHoursToShortlist + "h", delta:MINUS + Math.abs(lastDelta(HRS)).toFixed(1) + "h", dir:"up", hint:"faster than last month"},
+  membership:{label:"Membership revenue", value:eur(MEMBERSHIP_ANNUAL), delta:growth(MRR), dir:"up", hint:"simulated, annualised"},
+  fees:{label:"Success fees this month", value:eur(FEE[11]), delta:growth(FEE), dir:"up", hint:"8% default rate"}
 };
 
+const regionSplit = () => {
+  const total = MARKET.registeredProfessionals;
+  const groups = [["Dublin",["Dublin"]],["Munster",["Munster"]],["Rest of Leinster",["Rest of Leinster"]],["Connacht",["Connacht"]],["UK",["UK"]],["Elsewhere",["Ulster (ROI)","Rest of world"]]];
+  const shares = groups.map(g => g[1].reduce((s, l) => s + ((REGION_MIX.find(r => r.label === l) || {}).value || 0), 0));
+  let left = total;
+  return groups.map((g, i) => {
+    const v = i === groups.length - 1 ? left : Math.round(total * shares[i] / 100);
+    left -= v;
+    return [g[0], num(v), shares[i] + "%", i === 0 ? 1 : 0];
+  });
+};
+const FUNNEL_SHORT = {"Site visits":"Site visits", "CV uploads":"CV uploads", "Completed profiles":"Completed", "Verified profiles":"Verified", "Discoverable":"Discoverable"};
+const FUNNEL_OF = ["of reach", "of visits", "of uploads", "of completed", "of verified"];
+const funnelSteps = () => CANDIDATE_FUNNEL.slice(1).map((s, i) =>
+  [FUNNEL_SHORT[s.label] || s.label, num(s.value), pctOf(s.value, CANDIDATE_FUNNEL[i].value) + " " + FUNNEL_OF[i], s.value]);
+const CAMPAIGN_SHORT = {cp1:"Founder network", cp2:"Leaders breakfast", cp3:"Market value", cp4:"Student pathways", cp5:"Career change", cp6:"Group roadshow"};
+const TOP_CAMPAIGNS = CAMPAIGNS.slice().sort((a, b) => b.signups - a.signups).slice(0, 4);
+const REV_NOW = FEE[11] + MRR[11] + EDU[11];
+const INVOICE_RANK = {overdue:0, invoiced:1, pending:2, paid:3};
+const FEE_ROWS = PLACEMENTS.slice().sort((a, b) => (INVOICE_RANK[a.invoice] - INVOICE_RANK[b.invoice]) || (b.salary * b.feeRate - a.salary * a.feeRate)).slice(0, 4)
+  .map(p => [candName(p.candidateId) + " · " + empShort(p.employerId), eur(p.salary * p.feeRate), pctRate(p.feeRate), cap(p.invoice)]);
+
 const ASPECT_DEFS = [
-  {id:"sales", label:"Sales", color:"var(--accent)", owner:"NIAMH CRONIN", description:"Counter, trade accounts and quotes out the door.",
-   kind:"columns", chartTitle:"Revenue by month", chartUnit:"EUR",
-   chart:[["Sep",288,"€0k"],["Oct",301,"€0k"],["Nov",352,"€0k"],["Dec",376,"€0k"],["Jan",268,"€0k"],["Feb",294,"€0k"],["Mar",318,"€0k"],["Apr",341,"€0k"],["May",362,"€0k"],["Jun",384,"€0k"],["Jul",398,"€0k"],["Aug",413,"€0k"]],
-   splitTitle:"Where it came from",
-   split:[["Trade counter","€214.6k","72%",1],["Contract accounts","€156.8k","53%",0],["Online orders","€41.4k","18%",0]],
-   tableCols:["Account","Revenue","Change","Owner"],
-   table:[["Casey Builders","€48,210","+12.4%","Niamh Cronin"],["Dunne & Sons Ltd","€28,410","−18.2%","Aoife Nolan"],["Fitzgerald Heating","€21,860","+4.1%","Niamh Cronin"],["Riverside Developments","€18,240","+9.6%","Tom Walsh"]],
-   metrics:[["Revenue","€412,800","+6.2%","up","30 days",[.4,.55,.44,.62,.5,.7,.6,.78,1]],
-     ["Orders","318","+22","up","30 days",[.5,.6,.44,.7,.55,.75,.62,.8,.9]],
-     ["Average order","€1,298","+1.8%","up","vs last month",[.6,.58,.62,.6,.66,.64,.7,.68,.74]],
-     ["Quotes won","41%","−3pt","down","conversion",[.7,.66,.7,.6,.62,.55,.58,.5,.48]]]},
-  {id:"development", label:"Development", color:"#9fd6f0", owner:"TOM WALSH", description:"Modules shipped into the client build and what they contributed.",
-   kind:"rows", rows:[["approval routing","412 runs",412],["overdue reminder","308 runs",308],["visit escalation","286 runs",286],["xero sync","198 runs",198],["briefing job","80 runs",80]], chartTitle:"Runs by automation", chartUnit:"RUNS · 30 DAYS",
-   chart:[["Sep",620,"620"],["Oct",684,"684"],["Nov",712,"712"],["Dec",760,"760"],["Jan",802,"802"],["Feb",864,"864"],["Mar",918,"918"],["Apr",986,"986"],["May",1042,"1042"],["Jun",1128,"1128"],["Jul",1204,"1204"],["Aug",1284,"1284"]],
-   splitTitle:"Runs by module",
-   split:[["core","1,042","81%",1],["site-visits","198","15%",0],["ui-showcase","44","4%",0]],
-   tableCols:["Module","Version","Contributions","State"],
-   table:[["core","0.1.0","31 routes · 21 events","always installed"],["site-visits","1.0.0","1 entity · 2 tools","installed"],["ui-showcase","0.1.0","3 pages","installed"],["wholesale","—","6 entities · 9 tools","available"]],
-   metrics:[["Modules live","3","+1","up","this quarter",[.2,.2,.4,.4,.4,.6,.6,.6,1]],
-     ["Helios tools","11","+2","up","registered",[.4,.44,.5,.5,.6,.6,.7,.8,.9]],
-     ["Automation runs","1,284","+9%","up","30 days",[.5,.55,.6,.58,.66,.7,.72,.8,.86]],
-     ["Failure rate","0.9%","−0.4pt","up","of all runs",[.8,.74,.7,.62,.6,.5,.44,.4,.32]]]},
-  {id:"marketing", label:"Marketing", color:"#e6c78a", owner:"AOIFE NOLAN", description:"Reach, enquiries and what turned into an account.",
-   kind:"funnel", funnel:[["Enquiries","184","—",184],["Quoted","96","52% of enquiries",96],["Won","39","41% of quotes",39],["Repeat order","12","31% of wins",12]], chartTitle:"Enquiry to repeat order", chartUnit:"CONVERSION",
-   chart:[["Sep",96,"96"],["Oct",104,"104"],["Nov",88,"88"],["Dec",112,"112"],["Jan",124,"124"],["Feb",118,"118"],["Mar",136,"136"],["Apr",142,"142"],["May",151,"151"],["Jun",164,"164"],["Jul",172,"172"],["Aug",184,"184"]],
-   splitTitle:"Where they came from",
-   split:[["Referral","78","42%",1],["Search","61","33%",0],["Trade shows","29","16%",0],["Direct","16","9%",0]],
-   tableCols:["Channel","Enquiries","Change","Cost each"],
-   table:[["Referral","78","+18.2%","€0.00"],["Search","61","+9.4%","€24.60"],["Trade shows","29","−6.1%","€41.20"],["Direct","16","+2.0%","€0.00"]],
-   metrics:[["Enquiries","184","+31","up","30 days",[.3,.4,.36,.5,.46,.6,.58,.7,.86]],
-     ["New accounts","12","+4","up","opened",[.2,.3,.24,.4,.36,.5,.44,.6,.7]],
-     ["Cost per enquiry","€18.40","−€2.10","up","blended",[.8,.76,.7,.66,.6,.56,.5,.46,.4]],
-     ["Repeat rate","68%","+3pt","up","ordering again",[.5,.54,.58,.56,.62,.64,.66,.7,.74]]]},
-  {id:"operations", label:"Operations", color:"#dcded6", owner:"SÉAMUS BYRNE", description:"Installers, vans, site visits and the work queue.",
-   kind:"stacked", legend:["Head office","Ballincollig depot","Mallow yard"], stacked:[["Sep",[34,28,9]],["Oct",[36,30,9]],["Nov",[39,32,10]],["Dec",[37,31,10]],["Jan",[32,27,8]],["Feb",[35,29,9]],["Mar",[40,33,10]],["Apr",[43,35,11]],["May",[46,37,12]],["Jun",[49,39,12]],["Jul",[52,42,13]],["Aug",[64,48,14]]], chartTitle:"Jobs completed by month", chartUnit:"JOBS",
-   chart:[["Sep",88,"88"],["Oct",94,"94"],["Nov",102,"102"],["Dec",96,"96"],["Jan",84,"84"],["Feb",91,"91"],["Mar",104,"104"],["Apr",112,"112"],["May",118,"118"],["Jun",121,"121"],["Jul",124,"124"],["Aug",126,"126"]],
-   splitTitle:"By location",
-   split:[["Head office","64","51%",1],["Ballincollig depot","48","38%",0],["Mallow yard","14","11%",0]],
-   tableCols:["Installer","Jobs","On time","Location"],
-   table:[["Séamus Byrne","41","94%","Ballincollig"],["Tom Walsh","34","88%","Head office"],["Niamh Cronin","28","96%","Head office"],["Unassigned","4","—","Ballincollig"]],
-   metrics:[["Jobs completed","126","+4","up","30 days",[.5,.6,.5,.66,.6,.7,.66,.76,.84]],
-     ["Overdue tasks","11","+3","down","past due",[.3,.36,.3,.44,.4,.5,.56,.7,.85]],
-     ["Visits completed","38","+11%","up","30 days",[.4,.5,.6,.5,.66,.6,.72,.8,.9]],
-     ["Installer hours","84%","−2pt","down","billable",[.8,.78,.8,.76,.78,.74,.76,.72,.7]]]},
-  {id:"finance", label:"Finance", color:"#7fd8a4", owner:"AOIFE NOLAN", description:"Cash in, debt ageing and margin after cost.",
-   kind:"area", chartTitle:"Cash collected by month", chartUnit:"EUR",
-   chart:[["Sep",252,"€0k"],["Oct",268,"€0k"],["Nov",296,"€0k"],["Dec",318,"€0k"],["Jan",246,"€0k"],["Feb",264,"€0k"],["Mar",288,"€0k"],["Apr",306,"€0k"],["May",324,"€0k"],["Jun",342,"€0k"],["Jul",358,"€0k"],["Aug",368,"€0k"]],
-   splitTitle:"Debt by age",
-   split:[["0–30 days","€184.2k","61%",1],["31–60 days","€82.4k","27%",0],["61–90 days","€28.6k","9%",0],["90 days plus","€12.6k","4%",0]],
-   tableCols:["Account","Balance","Change","Oldest"],
-   table:[["Dunne & Sons Ltd","€28,410","+42.0%","74 days"],["Fitzgerald Heating","€9,240","+11.2%","63 days"],["Riverside Developments","€3,560","−4.4%","61 days"],["Glanmire Mechanical","€1,180","−22.0%","8 days"]],
-   metrics:[["Cash collected","€368,140","+4.1%","up","30 days",[.5,.56,.5,.62,.58,.68,.66,.74,.8]],
-     ["Overdue debt","€41,200","+€8,410","down","60 days plus",[.3,.34,.4,.38,.46,.5,.6,.7,.84]],
-     ["Gross margin","31.4%","−0.6pt","down","vs last month",[.7,.72,.7,.68,.68,.66,.64,.62,.6]],
-     ["Days to pay","38","+6","down","weighted",[.4,.44,.42,.5,.52,.6,.62,.7,.76]]]},
-  {id:"support", label:"Support", color:"#e2705c", owner:"NIAMH CRONIN", description:"Callbacks, warranty work and what came back twice.",
-   kind:"dots", target:12, targetLabel:"Target: 12 callbacks a month or fewer", chartTitle:"Callbacks by month", chartUnit:"COUNT",
-   chart:[["Sep",18,"18"],["Oct",16,"16"],["Nov",21,"21"],["Dec",19,"19"],["Jan",24,"24"],["Feb",22,"22"],["Mar",17,"17"],["Apr",15,"15"],["May",14,"14"],["Jun",12,"12"],["Jul",9,"9"],["Aug",7,"7"]],
-   splitTitle:"By cause",
-   split:[["Install fault","3","43%",1],["Part failure","2","29%",0],["User error","2","28%",0]],
-   tableCols:["Site","Callbacks","First-visit fix","Cost"],
-   table:[["Ó Riain, Glanmire","2","50%","€840"],["Casey Builders","2","100%","€410"],["Fitzgerald Heating","2","100%","€1,240"],["Kelleher, Cobh","1","100%","€650"]],
-   metrics:[["Open callbacks","7","−2","up","live",[.6,.58,.54,.5,.48,.44,.4,.38,.34]],
-     ["First-visit fix","82%","+4pt","up","of callbacks",[.5,.54,.56,.6,.6,.66,.7,.74,.8]],
-     ["Warranty cost","€3,140","−€420","up","30 days",[.7,.66,.62,.6,.54,.5,.46,.44,.4]],
-     ["Repeat faults","3","−1","up","same site",[.5,.5,.46,.4,.4,.36,.3,.3,.26]]]}
+  {id:"marketplace", label:"Marketplace", color:"var(--accent)", owner:"CLODAGH REILLY",
+   description:"Professionals, employers and open roles. " + SCENARIO_CAPTION + ".",
+   kind:"columns", chartTitle:"Registered professionals by month", chartUnit:"PROFESSIONALS",
+   chart:MONTHS.map((m, i) => [m, REG[i], k1(REG[i])]),
+   splitTitle:"Where professionals are", split:regionSplit(),
+   tableCols:["Measure","Now","This month","Note"],
+   table:[["Registered professionals", num(REG[11]), signed(lastDelta(REG)), "Past the 100,000 target"],
+     ["Verified profiles", num(VER[11]), signed(lastDelta(VER)), pctOf(VER[11], MARKET.talentTarget) + " of the target"],
+     ["Employer accounts", num(EMP[11]), signed(lastDelta(EMP)), "Paying members"],
+     ["Open roles", num(VAC[11]), signed(lastDelta(VAC)), "Live on the marketplace"]],
+   metrics:[["Registered professionals", num(REG[11]), signed(lastDelta(REG)), "up", "this month", bars9(REG)],
+     ["Employer accounts", num(EMP[11]), signed(lastDelta(EMP)), "up", "paying members", bars9(EMP)],
+     ["Open roles", num(VAC[11]), signed(lastDelta(VAC)), "up", "live vacancies", bars9(VAC)],
+     ["Placements", num(PLC[11]), signed(lastDelta(PLC)), "up", "this month", bars9(PLC)]]},
+  {id:"growth", label:"Growth", color:"var(--teal)", owner:"LEAH CORCORAN",
+   description:"How professionals find Recruit, from first visit to discoverable. All time, illustrative.",
+   kind:"funnel", funnel:funnelSteps(), chartTitle:"Candidate funnel", chartUnit:"ALL TIME",
+   chart:MONTHS.map((m, i) => [m, REG[i], k1(REG[i])]),
+   splitTitle:"Projected campaign sign-ups",
+   split:TOP_CAMPAIGNS.map((c, i) => [CAMPAIGN_SHORT[c.id] || c.name, num(c.signups), pctOf(c.signups, TOP_CAMPAIGNS[0].signups), i === 0 ? 1 : 0]),
+   tableCols:["Campaign","Sign-ups","Conversion","Status"],
+   table:TOP_CAMPAIGNS.map(c => [c.name, num(c.signups), c.conv.toFixed(1) + "%", c.status]),
+   metrics:[["Registered professionals", num(REG[11]), growth(REG), "up", "this month", bars9(REG)],
+     ["Verified profiles", num(VER[11]), growth(VER), "up", "this month", bars9(VER)],
+     ["Discoverable", num(DISC[11]), growth(DISC), "up", "opted in to search", bars9(DISC)],
+     ["Employer accounts", num(EMP[11]), growth(EMP), "up", "this month", bars9(EMP)]]},
+  {id:"commercial", label:"Commercial", color:"#f0a33e", owner:"MICHAEL TIERNEY",
+   description:"Success fees, memberships and education revenue by month. Simulated.",
+   kind:"stacked", legend:["Success fees","Memberships","Education"],
+   stacked:MONTHS.map((m, i) => [m, [Math.round(FEE[i] / 1000), Math.round(MRR[i] / 1000), Math.round(EDU[i] / 1000)]]),
+   chartTitle:"Revenue by month", chartUnit:"EUR THOUSANDS",
+   chart:MONTHS.map((m, i) => { const t = FEE[i] + MRR[i] + EDU[i]; return [m, Math.round(t / 1000), eurk1(t)]; }),
+   splitTitle:"Revenue this month",
+   split:[["Success fees", eurk1(FEE[11]), pctOf(FEE[11], REV_NOW), 1], ["Memberships", eurk1(MRR[11]), pctOf(MRR[11], REV_NOW), 0], ["Education", eurk1(EDU[11]), pctOf(EDU[11], REV_NOW), 0]],
+   tableCols:["Placement","Fee","Rate","Invoice"],
+   table:FEE_ROWS,
+   metrics:[["Success fees", eur(FEE[11]), growth(FEE), "up", "this month", bars9(FEE)],
+     ["Membership revenue", eur(MEMBERSHIP_ANNUAL), growth(MRR), "up", "simulated, annualised", bars9(MRR)],
+     ["Education revenue", eur(EDU[11]), growth(EDU), "up", "partner shares, this month", bars9(EDU)],
+     ["Saving vs agency fees", eur(ECON.saving), growth(PLC), "up", "this month, illustrative", bars9(PLC)]]},
+  {id:"quality", label:"Quality", color:"#c8b4f0", owner:"YASMIN HADDAD",
+   description:"Speed and accuracy of matching and verification against Recruit's targets.",
+   kind:"dots", target:6, targetLabel:"Target: a shortlist inside 6 hours", chartTitle:"Median hours to shortlist", chartUnit:"HOURS",
+   chart:MONTHS.map((m, i) => [m, HRS[i], HRS[i] + "h"]),
+   splitTitle:"Verification queue",
+   split:[["Within 5 days", num(MARKET.verificationBacklog - VERIFY_OLD), pctOf(MARKET.verificationBacklog - VERIFY_OLD, MARKET.verificationBacklog), 1],
+     ["Older than 5 days", num(VERIFY_OLD), pctOf(VERIFY_OLD, MARKET.verificationBacklog), 0]],
+   tableCols:["Measure","Now","Status","Note"],
+   table:[["Median time to shortlist", HRS[11] + "h", "On target", "Target inside 6 hours"],
+     ["Verification turnaround", QUALITY.verificationSlaHours + "h", "On target", "Median, target inside 5 days"],
+     ["Checks older than 5 days", num(VERIFY_OLD), MINUS + VERIFY_OLD + " to clear", "Of " + num(MARKET.verificationBacklog) + " waiting"],
+     ["Profile accuracy", QUALITY.profileAccuracy + "%", "On target", "Spot-checked profiles"]],
+   metrics:[["Median time to shortlist", HRS[11] + "h", MINUS + Math.abs(lastDelta(HRS)).toFixed(1) + "h", "up", "vs last month", bars9(HRS)],
+     ["Introduction acceptance", QUALITY.introAcceptance + "%", "of requests", "up", "candidates agreeing to talk", FLAT],
+     ["Offer acceptance", QUALITY.offerAcceptance + "%", "of offers", "up", "accepted once sent", FLAT],
+     ["12-month retention", QUALITY.retention12m + "%", QUALITY.retention6m + "% at 6 months", "up", "placed professionals", FLAT]]}
 ];
 
 const FILTER_GROUPS = [
-  {title:"AREA", items:["Sales","Development","Marketing","Operations","Finance","Support"]},
-  {title:"SPINE", items:["Location","Team","Person","Organisation","Module"]},
-  {title:"TIME", items:["This week","This month","This quarter","Year to date"]}
+  {title:"AREA", items:ASPECT_DEFS.map(a => a.label)},
+  {title:"SEGMENT", items:["Hotels","Restaurants","Events","Retail"]},
+  {title:"REGION", items:["Dublin","Munster","Connacht","UK"]}
 ];
 
+/* ---- work: automations, agent routines and schedules ----
+   agendaTime is what the day's agenda shows in its time column. */
 const OPS_DEFS = [
-  {id:"o1", name:"Weekly management report", kind:"report", owner:"Chief of Staff", ownerKind:"agent", initials:"CS",
-   trigger:"Mon, 08:00", triggerKind:"schedule", next:"3 days", last:"Sent to 4 people", status:"healthy", rate:98, on:true,
-   what:"Pulls last week's numbers from every area, writes the commentary and sends one page to the management team before Monday's meeting.",
-   why:"The meeting used to start with twenty minutes of people reading numbers off their own screens.",
-   saved:"6 hours a month",
-   steps:[["Trigger","Every Monday at 08:00"],["Find","Last week's metrics across all six areas"],["Check","Flag anything moving more than 10%"],["Draft","Write the one-page commentary"],["Send","Email the management team"],["Update","File the report against the week"]],
-   runs:[["Mon 08:00","1m 12s","ok","4 recipients","€0.04"],["Mon 25 Aug 08:00","1m 04s","ok","4 recipients","€0.04"],["Mon 18 Aug 08:00","58s","ok","4 recipients","€0.03"]]},
-  {id:"o2", name:"Chase unpaid invoices", kind:"automation", owner:"Finance Agent", ownerKind:"agent", initials:"FA",
-   trigger:"Daily, 09:00", triggerKind:"schedule", next:"Tomorrow", last:"3 drafts waiting", status:"approval", rate:94, on:true,
-   what:"Finds invoices past 14 days, excludes anything disputed, drafts a reminder in your tone and parks it for the finance manager.",
-   why:"Chasing was happening in bursts, so the oldest debt got the least attention.",
-   saved:"11 hours a month",
-   steps:[["Trigger","Every weekday at 09:00"],["Find","Unpaid invoices older than 14 days"],["Check","Exclude disputed invoices"],["Draft","Create personalised reminders"],["Approval","Finance manager reviews","gate"],["Send","Email the customer"],["Update","Record the activity in Pulse"]],
-   runs:[["Today 09:00","42s","partial","3 of 7 drafted","€0.02","4 organisations have no billing email"],["Yesterday 09:00","51s","ok","6 sent","€0.03"],["Mon 09:00","47s","ok","5 sent","€0.03"]]},
-  {id:"o3", name:"New enquiry follow-up", kind:"automation", owner:"Sales Agent", ownerKind:"agent", initials:"SA",
-   trigger:"New lead created", triggerKind:"event", next:"Event-based", last:"11 followed up today", status:"healthy", rate:99, on:true,
-   what:"Answers a new enquiry within minutes, asks the two questions the counter always needs, and creates the quote task.",
-   why:"Enquiries arriving after 5pm were sitting until the next morning.",
-   saved:"14 hours a month",
-   steps:[["Trigger","A lead is created in Pulse"],["Find","Match against existing organisations"],["Draft","Write the first reply"],["Send","Email the enquiry"],["Update","Create a quote task for the counter"]],
-   runs:[["Today 16:20","6s","ok","1 lead","€0.01"],["Today 15:02","7s","ok","1 lead","€0.01"],["Today 11:48","6s","ok","1 lead","€0.01"]]},
-  {id:"o4", name:"Certificate renewal reminder", kind:"routine", owner:"Operations", ownerKind:"person", initials:"TW",
-   trigger:"60 days before expiry", triggerKind:"event", next:"14:20", last:"Failed — missing contact", status:"failed", rate:71, on:true,
-   what:"Watches every installer certificate and insurance document, and gives sixty days' notice before one lapses.",
-   why:"A lapsed certificate stopped two jobs last year.",
-   saved:"3 hours a month",
-   steps:[["Trigger","60 days before a document expires"],["Find","The owner of the certificate"],["Check","Has a renewal already been booked?"],["Send","Notify the owner and Operations"],["Update","Create the renewal task"]],
-   runs:[["Today 14:20","3s","failed","0 of 2","€0.00","No contact on file for Mallow yard"],["Yesterday 14:20","4s","failed","0 of 1","€0.00","No contact on file for Mallow yard"],["Fri 14:20","5s","ok","1 notified","€0.01"]]},
-  {id:"o5", name:"Morning briefing", kind:"routine", owner:"Briefing Agent", ownerKind:"agent", initials:"BR",
-   trigger:"Weekdays, 07:00", triggerKind:"schedule", next:"Tomorrow", last:"Delivered 07:02", status:"healthy", rate:100, on:true,
-   what:"Reads the whole business overnight and tells you the two things that actually need you.",
-   why:"You were opening six screens before your first coffee.",
+  {id:"o1", name:"Morning briefing", kind:"routine", owner:"Briefing Agent", ownerKind:"agent", initials:"BA", agendaTime:"07:00",
+   trigger:"Weekdays, 07:00", triggerKind:"schedule", next:"Tomorrow 07:00", last:"Posted to Home 07:00", status:"healthy", rate:100, on:true,
+   what:"Reads roles, candidates, revenue, placements, verification and growth overnight, then tells John the few things that need a decision.",
+   why:"John was opening six screens before his first call of the day.",
    saved:"9 hours a month",
-   steps:[["Trigger","Every weekday at 07:00"],["Find","Overnight changes across cash, work and approvals"],["Check","Drop anything already handled"],["Draft","Write the briefing"],["Send","Post to Home and WhatsApp"]],
-   runs:[["Today 07:00","22s","ok","1 briefing","€0.02"],["Yesterday 07:00","19s","ok","1 briefing","€0.02"],["Mon 07:00","24s","ok","1 briefing","€0.02"]]},
-  {id:"o6", name:"Weekly stock check", kind:"task", owner:"Stock Watch", ownerKind:"agent", initials:"SW",
-   trigger:"Thursdays, 09:00", triggerKind:"schedule", next:"Thu 09:00", last:"2 lines flagged", status:"healthy", rate:96, on:true,
-   what:"Compares reorder points against what the week's jobs need and raises the purchase order lines.",
-   why:"Two jobs were rescheduled in June for parts nobody had ordered.",
-   saved:"5 hours a month",
-   steps:[["Trigger","Every Thursday at 09:00"],["Find","Lines below reorder point"],["Check","What this week's jobs need"],["Approval","Buyer confirms the order","gate"],["Update","Raise the purchase order"]],
-   runs:[["Thu 09:00","31s","ok","2 lines","€0.02"],["Thu 21 Aug 09:00","28s","ok","1 line","€0.02"]]},
-  {id:"o7", name:"Xero invoice sync", kind:"automation", owner:"Ops Watchdog", ownerKind:"agent", initials:"OW",
-   trigger:"Hourly", triggerKind:"schedule", next:"Paused", last:"Token expired", status:"failed", rate:62, on:false,
-   what:"Posts every finalised invoice into Xero and reconciles what came back.",
-   why:"Manual re-entry was the single biggest source of mismatched invoices.",
-   saved:"18 hours a month",
-   steps:[["Trigger","Every hour"],["Find","Invoices not yet in Xero"],["Send","Post to Xero","external"],["Check","Reconcile what came back"],["Update","Mark them synced"]],
-   runs:[["Today 02:14","1.2s","failed","0 of 148","€0.00","invalid_grant: refresh token expired 27 February"],["Today 01:14","1.1s","failed","0 of 141","€0.00","invalid_grant: refresh token expired 27 February"],["Yesterday 23:14","4s","ok","12 posted","€0.01"]]},
-  {id:"o8", name:"Weekend on-call handover", kind:"routine", owner:"Chief of Staff", ownerKind:"agent", initials:"CS",
-   trigger:"Fri, 16:30", triggerKind:"schedule", next:"Fri 16:30", last:"Sent to 3 people", status:"healthy", rate:97, on:true,
-   what:"Writes the weekend handover: open jobs, who is on call, and anything a customer is waiting on.",
-   why:"Weekend calls were being answered by whoever picked up, with no context.",
-   saved:"4 hours a month",
-   steps:[["Trigger","Every Friday at 16:30"],["Find","Open jobs and unanswered customers"],["Draft","Write the handover note"],["Send","WhatsApp the on-call rota"]],
-   runs:[["Fri 16:30","18s","ok","3 recipients","€0.02"],["Fri 15 Aug 16:30","21s","ok","3 recipients","€0.02"]]},
-  {id:"o9", name:"Timesheet reminder", kind:"task", owner:"Operations", ownerKind:"person", initials:"TW",
-   trigger:"Fri, 15:00", triggerKind:"schedule", next:"Fri 15:00", last:"9 of 12 submitted", status:"approval", rate:88, on:true,
-   what:"Nudges anyone who has not filed hours, then sends Operations the list still outstanding.",
-   why:"Payroll was chasing the same four people every week.",
-   saved:"3 hours a month",
-   steps:[["Trigger","Every Friday at 15:00"],["Find","Staff with no hours filed"],["Send","Remind each person"],["Approval","Operations signs off the week","gate"]],
-   runs:[["Fri 15:00","12s","partial","9 of 12","€0.01"],["Fri 15 Aug 15:00","11s","ok","12 of 12","€0.01"]]},
-  {id:"o10", name:"Overnight backup check", kind:"automation", owner:"Ops Watchdog", ownerKind:"agent", initials:"OW",
-   trigger:"Daily, 03:00", triggerKind:"schedule", next:"Tonight", last:"All systems clean", status:"healthy", rate:100, on:true,
-   what:"Confirms every nightly backup completed and the restore test passed, and raises an alert if not.",
-   why:"A failed backup went unnoticed for eleven days in January.",
-   saved:"2 hours a month",
-   steps:[["Trigger","Every day at 03:00"],["Check","Every backup job completed"],["Check","Last restore test passed"],["Send","Alert only if something failed"]],
-   runs:[["Today 03:00","8s","ok","6 jobs","€0.00"],["Yesterday 03:00","9s","ok","6 jobs","€0.00"]]},
-  {id:"o11", name:"Month-end close pack", kind:"report", owner:"Finance Agent", ownerKind:"agent", initials:"FA",
-   trigger:"1st, 07:00", triggerKind:"schedule", next:"1 Sep 07:00", last:"Delivered 1 Aug", status:"healthy", rate:95, on:true,
-   what:"Assembles the close pack: aged debt, margin by area, cash position and the variance commentary.",
-   why:"Close took three days of copying between spreadsheets.",
+   steps:[["Trigger","Every weekday at 07:00"],["Find","Overnight changes across the marketplace"],["Check","Drop anything a team already handled"],["Draft","Write the briefing"],["Send","Post to Home"]],
+   runs:[["Today 07:00","24s","ok","Whole marketplace","€0.02"],["Yesterday 07:00","22s","ok","Whole marketplace","€0.02"],["Mon 07:00","26s","ok","Whole marketplace","€0.02"]]},
+  {id:"o2", name:"Vacancy exception watch", kind:"automation", owner:"Ops Watchdog", ownerKind:"agent", initials:"OW", agendaTime:"Hourly",
+   trigger:"Hourly", triggerKind:"schedule", next:"10:40", last:"5 exceptions raised", status:"approval", rate:99, on:true,
+   what:"Checks every open vacancy for no shortlist after 21 days, introductions unanswered for 48 hours and offers waiting on approval.",
+   why:"A role that goes quiet is the fastest way to lose an employer.",
+   saved:"12 hours a month",
+   steps:[["Trigger","Every hour"],["Find","Vacancies, introductions and offers that stopped moving"],["Check","Skip anything a person is already handling"],["Draft","Write the exception and a suggested next step"],["Approval","The account owner decides what goes to the employer","gate"],["Update","Log the exception against the vacancy"]],
+   runs:[["Today 09:40","14s","ok","326 vacancies, 1,280 accounts","€0.02"],["Today 08:40","12s","ok","326 vacancies","€0.02"],["Yesterday 17:40","13s","ok","326 vacancies","€0.02"]]},
+  {id:"o3", name:"Verification chase", kind:"automation", owner:"Verification Agent", ownerKind:"agent", initials:"VA", agendaTime:"30 min",
+   trigger:"Every 30 minutes", triggerKind:"schedule", next:"10:05", last:"71 sent, 25 waiting", status:"failed", rate:94, on:true,
+   what:"Sends credential checks to issuers, chases references and moves anything stuck to the manual queue. It never marks a fact as verified.",
+   why:"Unverified profiles are the slowest part of every shortlist.",
+   saved:"40 hours a month",
+   steps:[["Trigger","Every 30 minutes"],["Find","Requests waiting on an issuer, referee or candidate"],["Send","Ask the issuer to confirm (simulated)"],["Check","Nothing is verified without a confirmation"],["Update","Move stuck checks to the manual queue"]],
+   runs:[["Today 09:05","41s","partial","96 checks","€0.02","25 waiting on candidate documents"],["Today 08:35","38s","failed","1 issuer","€0.00","Issuer endpoint not connected (simulated). Moved to the manual queue."],["Today 08:05","36s","ok","88 checks","€0.02"]]},
+  {id:"o4", name:"Renewal reminders", kind:"routine", owner:"Ops Watchdog", ownerKind:"agent", initials:"OW", agendaTime:"08:00",
+   trigger:"Daily, 08:00", triggerKind:"schedule", next:"Tomorrow 08:00", last:RENEWALS_30 + " drafts waiting", status:"approval", rate:96, on:true,
+   what:"Drafts a renewal note for every membership 30, 14 and 3 days before it lapses, with the year's placements and savings.",
+   why:"Renewals were being chased the week they lapsed.",
+   saved:"10 hours a month",
+   steps:[["Trigger","Every day at 08:00"],["Find","Memberships 30, 14 or 3 days from renewal"],["Draft","Write the renewal note with the year's numbers"],["Approval","Owen Brady reviews","gate"],["Send","Email the employer (planned integration)"],["Update","Log it against the account"]],
+   runs:[["Today 08:00","19s","partial",RENEWALS_30 + " accounts","€0.03",RENEWALS_30 + " drafts waiting for review"],["Yesterday 08:00","17s","ok","4 accounts","€0.01"],["Mon 08:00","18s","ok","6 accounts","€0.01"]]},
+  {id:"o5", name:"Offer approval routing", kind:"automation", owner:"Clodagh Reilly", ownerKind:"person", initials:"CR", agendaTime:"Live",
+   trigger:"Offer drafted", triggerKind:"event", next:"Event-based", last:"1 waiting on Deirdre Foley", status:"healthy", rate:100, on:true,
+   what:"Sends every drafted offer to the employer's named approver and keeps it hidden from the candidate until it is approved and sent.",
+   why:"Offers were reaching candidates before finance had seen them.",
+   saved:"6 hours a month",
+   steps:[["Trigger","An employer drafts an offer"],["Find","The approver for that employer"],["Check","Hide the draft from the candidate"],["Approval","The named approver decides","gate"],["Update","Release the offer for the employer to send"]],
+   runs:[["Mon 16 Nov","2s","ok","Declan Murphy, General Manager","€0.00"],["Thu 12 Nov","2s","ok","Sarah Kavanagh, Grand Canal","€0.00"],["Mon 9 Nov","2s","ok","Sarah Kavanagh, General Manager","€0.00"]]},
+  {id:"o6", name:"Partner referral reconciliation", kind:"report", owner:"Growth & Partnerships", ownerKind:"agent", initials:"GP", agendaTime:"07:00",
+   trigger:"1st of the month, 07:00", triggerKind:"schedule", next:"1 Dec 07:00", last:"Delivered 1 Nov", status:"healthy", rate:95, on:true,
+   what:"Matches course enrolments from Recruit referrals against each partner's proposed share and drafts the monthly statement. Partners are concepts; nothing is invoiced.",
+   why:"Partner shares were tracked in a spreadsheet nobody owned.",
+   saved:"8 hours a month",
+   steps:[["Trigger","First of the month at 07:00"],["Find","Enrolments from Recruit referrals"],["Check","Apply each partner's proposed share"],["Draft","Write the partner statement"],["Approval","Fergal Nash reviews","gate"]],
+   runs:[["1 Nov 07:00","1m 12s","ok","5 partners","€0.04"],["1 Oct 07:00","1m 08s","ok","4 partners","€0.04"]]},
+  {id:"o7", name:"CV structuring", kind:"automation", owner:"Profile Intelligence", ownerKind:"agent", initials:"PI", agendaTime:"Live",
+   trigger:"CV uploaded", triggerKind:"event", next:"Event-based", last:agentById("profile").runsToday + " today", status:"healthy", rate:97, on:true,
+   what:"Turns each uploaded CV into a structured profile draft and lists the evidence still missing. Self-reported stays self-reported.",
+   why:"Profiles were half-empty, so matching missed good people.",
+   saved:"60 hours a month",
+   steps:[["Trigger","A professional uploads a CV"],["Find","Experience, skills and qualifications"],["Draft","Structured profile and career timeline"],["Check","Flag items to verify"],["Update","Save the draft for the candidate to confirm"]],
+   runs:[["Today 09:52","6s","ok","1 CV","€0.01"],["Today 07:58","7s","ok","1 CV","€0.01"],["Yesterday 18:20","6s","ok","1 CV","€0.01"]]},
+  {id:"o8", name:"Weekly marketplace review", kind:"report", owner:"Briefing Agent", ownerKind:"agent", initials:"BA", agendaTime:"08:00",
+   trigger:"Mon, 08:00", triggerKind:"schedule", next:"Mon 08:00", last:"Shared with 7 leads", status:"healthy", rate:98, on:true,
+   what:"One page for Monday's team meeting: vacancies at risk, pipelines that moved, revenue and verification.",
+   why:"The meeting used to start with twenty minutes of people reading their own screens.",
+   saved:"6 hours a month",
+   steps:[["Trigger","Every Monday at 08:00"],["Find","Last week's numbers from every team"],["Check","Flag anything moving more than 10%"],["Draft","Write the one-page review"],["Send","Share with the HQ team"]],
+   runs:[["Mon 16 Nov 08:00","1m 12s","ok","7 recipients","€0.04"],["Mon 9 Nov 08:00","1m 04s","ok","7 recipients","€0.04"]]},
+  {id:"o9", name:"Market range refresh", kind:"routine", owner:"Market Value Analyst", ownerKind:"agent", initials:"MV", agendaTime:"08:15",
+   trigger:"Daily, 08:15", triggerKind:"schedule", next:"Tomorrow 08:15", last:"1,120 profiles", status:"healthy", rate:100, on:true,
+   what:"Re-estimates market ranges for every profile that changed, from the illustrative benchmark set. Every figure is labelled an estimate.",
+   why:"Stale salary ranges undermine trust faster than anything else.",
+   saved:"20 hours a month",
+   steps:[["Trigger","Every day at 08:15"],["Find","Profiles that changed since the last run"],["Check","The benchmark set for role and region"],["Update","Refresh the estimated range"]],
+   runs:[["Today 08:15","3m 10s","ok","1,120 profiles","€0.09"],["Yesterday 08:15","3m 02s","ok","1,094 profiles","€0.09"]]},
+  {id:"o10", name:"Career explorer reports", kind:"routine", owner:"Career Pathfinder", ownerKind:"agent", initials:"CP", agendaTime:"07:30",
+   trigger:"Weekly, and on request", triggerKind:"event", next:"On request", last:"640 reports", status:"healthy", rate:99, on:true,
+   what:"Maps transferable skills to adjacent roles and names the gaps worth closing. It suggests options and never predicts outcomes.",
+   why:"Professionals ready to change sector had no way to see where they fit.",
+   saved:"15 hours a month",
+   steps:[["Trigger","Weekly, and when a candidate asks"],["Find","Transferable skills"],["Check","Adjacent roles and partner courses"],["Draft","The career explorer report"]],
+   runs:[["Today 07:30","2m 44s","ok","640 profiles","€0.06"]]},
+  {id:"o11", name:"Commission statement", kind:"report", owner:"Michael Tierney", ownerKind:"person", initials:"MT", agendaTime:"17:00",
+   trigger:"Last working day, 17:00", triggerKind:"schedule", next:"Mon 30 Nov 17:00", last:"Delivered 30 Oct", status:"healthy", rate:95, on:true,
+   what:"Assembles success fees, membership revenue and partner shares for the month, with the variance commentary.",
+   why:"Month-end took three days of copying between spreadsheets.",
    saved:"16 hours a month",
-   steps:[["Trigger","First of the month at 07:00"],["Find","Last month's ledger and margin data"],["Check","Reconcile against the bank"],["Draft","Write the variance commentary"],["Send","Email the pack to Finance"]],
-   runs:[["1 Aug 07:00","3m 42s","ok","1 pack","€0.09"],["1 Jul 07:00","3m 51s","ok","1 pack","€0.09"]]}
+   steps:[["Trigger","Last working day at 17:00"],["Find","Placements, memberships and partner shares"],["Check","Match fees to invoices"],["Draft","The variance commentary"],["Approval","John signs off","gate"],["Send","Add to the board pack"]],
+   runs:[["Fri 30 Oct 17:00","3m 42s","ok","1 pack","€0.09"],["Wed 30 Sep 17:00","3m 51s","ok","1 pack","€0.09"]]},
+  {id:"o12", name:"Pricing validation calls", kind:"task", owner:"John O'Farrell", ownerKind:"person", initials:"JO", agendaTime:"16:00",
+   trigger:"Tue and Thu, 16:00", triggerKind:"schedule", next:"Thu 16:00", last:"2 calls prepared", status:"healthy", rate:100, on:true,
+   what:"Books the next hotel general managers in the pricing validation round and prepares a one-page brief for each call.",
+   why:"Pricing for the middle tiers is still a concept assumption, so every call counts.",
+   saved:"4 hours a month",
+   steps:[["Trigger","Tuesdays and Thursdays at 16:00"],["Find","The next GMs in the validation round"],["Draft","A one-page brief for each call"],["Update","Log feedback against the pricing model"]],
+   runs:[["Tue 17 Nov 16:00","22s","ok","2 calls prepared","€0.02"],["Thu 12 Nov 16:00","20s","ok","2 calls prepared","€0.02"]]}
 ];
 
 const OPS_FILTERS = [
@@ -865,107 +1123,112 @@ const OPS_FILTERS = [
 ];
 
 const WORK_SECTIONS = [
-  {id:"tasks", label:"Tasks", blurb:"Everything assigned to you or your team, in one permission-filtered list.",
+  {id:"tasks", label:"Tasks", blurb:"Everything assigned to you or the HQ team, in one list.",
    views:["All tasks","Due tasks","Review","Done"], filters:["Due date","Any status","Anyone","Any due date"]},
-  {id:"approvals", label:"Approvals", blurb:"Requests and their steps. Every decision is written as the person who made it.",
+  {id:"approvals", label:"Approvals", blurb:"Decisions waiting on you. Every decision is written as the person who made it.",
    views:["Awaiting you","Awaiting others","Decided"], filters:["Raised date","Any value","Anyone"]},
-  {id:"workflows", label:"Workflows", blurb:"Automations and agent routines — what runs on its own, and who owns it.",
+  {id:"workflows", label:"Workflows", blurb:"Automations and agent routines: what runs on its own, and who owns it.",
    views:[], filters:[]},
-  {id:"schedules", label:"Schedules", blurb:"The team calendar: when recurring work fires and what it costs the week.",
+  {id:"schedules", label:"Schedules", blurb:"The HQ calendar: when recurring work fires and what it costs the week.",
    views:[], filters:[]}
 ];
 
 const WORK_TASKS = [
-  {id:"w1", title:"Chase INV-10428 — Dunne & Sons", status:"In progress", priority:"High", who:"AN",
-   due:"2d overdue", late:true, client:"Dunne & Sons Ltd", day:"Today", mins:"25 mins", view:"Due tasks"},
-  {id:"w2", title:"Reassign Van 04 jobs off Ballincollig", status:"In progress", priority:"High", who:"MK",
-   due:"Due today", late:false, client:"Ballincollig depot", day:"Today", mins:"50 mins", view:"Due tasks"},
-  {id:"w3", title:"Approve purchase order PO-4471", status:"Review", priority:"Medium", who:"MK",
-   due:"Due 12:00", late:false, client:"Munster Plumbing", day:"Today", mins:"15 mins", view:"Review"},
-  {id:"w4", title:"Sign off August counter stocktake", status:"Not started", priority:"Medium", who:"SB",
-   due:"No due date", late:false, client:"Head office", day:"Any day", mins:"Mins", view:"All tasks"},
-  {id:"w5", title:"Ballincollig lease decision", status:"Not started", priority:"High", who:"MK",
-   due:"Thursday", late:false, client:"Ballincollig depot", day:"Thu", mins:"1 hour", view:"All tasks"},
-  {id:"w6", title:"VAT return — August", status:"Done", priority:"Medium", who:"AN",
-   due:"Filed Friday", late:false, client:"Head office", day:"Fri", mins:"2 hours", view:"Done", done:true}
+  {id:"w1", title:"Find a shortlist for Fenwick & Vale's Operations Director", status:"In progress", priority:"High", who:"OB",
+   due:FV_OPS.postedDays + " days open", late:true, client:"Fenwick & Vale Hospitality", day:"Today", mins:"45 mins", view:"Due tasks"},
+  {id:"w2", title:"Approve the 10% executive commission rule", status:"Review", priority:"High", who:"JO",
+   due:"Due today", late:false, client:"Commission rules", day:"Today", mins:"15 mins", view:"Review"},
+  {id:"w3", title:"Chase the Cedarhouse placement invoice (" + eur(CEDAR_PL.salary * CEDAR_PL.feeRate) + ")", status:"In progress", priority:"Medium", who:"MT",
+   due:"6 days overdue", late:true, client:"Cedarhouse Hotels", day:"Today", mins:"20 mins", view:"Due tasks"},
+  {id:"w4", title:"Clear the " + VERIFY_OLD + " verification checks older than 5 days", status:"In progress", priority:"High", who:"YH",
+   due:"Due Friday", late:false, client:"Talent Verification", day:"Fri", mins:"Ongoing", view:"All tasks"},
+  {id:"w5", title:"Call Saltmarsh Bay Resort before the 6 Dec renewal", status:"Not started", priority:"Medium", who:"OB",
+   due:"Due Thursday", late:false, client:"Saltmarsh Bay Resort", day:"Thu", mins:"30 mins", view:"All tasks"},
+  {id:"w6", title:"Review the Leeside College proposal before it goes out", status:"Review", priority:"Medium", who:"JO",
+   due:"Due Friday", late:false, client:"Leeside College", day:"Fri", mins:"30 mins", view:"Review"},
+  {id:"w7", title:"Guest list for the Dublin hotel leaders breakfast", status:"Not started", priority:"Low", who:"JO",
+   due:"No due date", late:false, client:"Public launch", day:"Any day", mins:"1 hour", view:"All tasks"},
+  {id:"w8", title:"Renew Corrib Point Hotel's Growth membership", status:"Done", priority:"Medium", who:"OB",
+   due:"Done today", late:false, client:"Corrib Point Hotel", day:"Today", mins:"10 mins", view:"Done", done:true}
 ];
 
+/* Not drawn by the current views; kept in Recruit's own terms. */
 const WORKFLOWS = [
-  {name:"Overdue invoice reminder", state:"live", trigger:"schedule · daily 08:00",
-   actions:[["notify.email","write"],["tasks.create","write"]], lastRun:"Today 08:00",
-   result:"6 of 10 sent · partial", resultKind:"warn", runSummary:"11 ok · 3 partial",
-   runs:["ok","ok","partial","ok","ok","ok","partial","ok","ok","ok","ok","ok","partial","partial"]},
-  {name:"Approval routing over €10k", state:"live", trigger:"event · core.approval.created",
-   actions:[["approvals.route","read"],["notify.inbox","write"]], lastRun:"Today 08:54",
+  {name:"Vacancy exception watch", state:"live", trigger:"schedule · hourly",
+   actions:[["exceptions.raise","write"],["notify.inbox","write"]], lastRun:"Today 09:40",
+   result:"5 exceptions raised", resultKind:"ok", runSummary:"14 ok",
+   runs:["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"]},
+  {name:"Offer approval routing", state:"live", trigger:"event · offer.drafted",
+   actions:[["approvals.route","read"],["notify.inbox","write"]], lastRun:"Mon 16 Nov",
    result:"ok", resultKind:"ok", runSummary:"14 ok",
    runs:["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","ok"]},
-  {name:"Unassigned visit escalation", state:"live", trigger:"event · site-visits.visit.created",
-   actions:[["notify.inbox","write"]], lastRun:"Today 07:00",
-   result:"ok", resultKind:"ok", runSummary:"9 ok · 1 failed",
-   runs:["idle","idle","ok","ok","failed","ok","ok","ok","idle","ok","ok","ok","ok","ok"]},
-  {name:"Xero invoice sync", state:"failing", trigger:"schedule · hourly",
-   actions:[["xero.post","external"]], lastRun:"Today 02:14",
-   result:"invalid_grant · dead-lettered", resultKind:"bad", runSummary:"4 failed",
-   runs:["ok","ok","ok","ok","ok","ok","ok","ok","ok","ok","failed","failed","failed","failed"]}
+  {name:"Renewal reminders", state:"live", trigger:"schedule · daily 08:00",
+   actions:[["email.draft","write"]], lastRun:"Today 08:00",
+   result:RENEWALS_30 + " drafts waiting", resultKind:"warn", runSummary:"12 ok · 2 partial",
+   runs:["ok","ok","ok","partial","ok","ok","ok","ok","ok","ok","ok","ok","ok","partial"]},
+  {name:"Verification chase", state:"failing", trigger:"schedule · every 30 minutes",
+   actions:[["issuer.request","external"]], lastRun:"Today 09:05",
+   result:"issuer not connected · manual queue", resultKind:"bad", runSummary:"11 ok · 2 partial · 1 failed",
+   runs:["ok","ok","ok","ok","partial","ok","ok","ok","ok","ok","ok","failed","ok","partial"]}
 ];
 
 const SCHEDULES = [
-  {id:"s1", name:"Morning briefing", cadence:"Every weekday · 07:00", next:"Tomorrow 07:00", owner:"Briefing agent", on:true, day:1},
-  {id:"s2", name:"Overdue invoice reminder", cadence:"Daily · 08:00", next:"Tomorrow 08:00", owner:"Credit Control", on:true, day:1},
-  {id:"s3", name:"Xero invoice sync", cadence:"Hourly", next:"Paused", owner:"Ops Watchdog", on:false, day:0},
-  {id:"s4", name:"Weekly stock check", cadence:"Thursdays · 09:00", next:"Thu 09:00", owner:"Stock Watch", on:true, day:3},
-  {id:"s5", name:"Month-end close", cadence:"Last working day · 17:00", next:"Fri 17:00", owner:"Month-end close", on:true, day:4}
+  {id:"s1", name:"Morning briefing", cadence:"Every weekday · 07:00", next:"Tomorrow 07:00", owner:"Briefing Agent", on:true, day:1},
+  {id:"s2", name:"Market range refresh", cadence:"Daily · 08:15", next:"Tomorrow 08:15", owner:"Market Value Analyst", on:true, day:1},
+  {id:"s3", name:"Verification chase", cadence:"Every 30 minutes", next:"10:05", owner:"Verification Agent", on:true, day:0},
+  {id:"s4", name:"Weekly marketplace review", cadence:"Mondays · 08:00", next:"Mon 08:00", owner:"Briefing Agent", on:true, day:0},
+  {id:"s5", name:"Commission statement", cadence:"Last working day · 17:00", next:"Mon 30 Nov 17:00", owner:"Michael Tierney", on:true, day:4}
 ];
 
-const WIDGET_DEFS = [["inbox","Action inbox"],["work","My work"],["activity","Activity"],["kpi","Today's numbers"],["visits","Site visits"]];
+const WIDGET_DEFS = [["inbox","Action inbox"],["work","My work"],["activity","Activity"],["kpi","Today's numbers"],["visits","Hiring this week"]];
 const WORK_WIDGETS = [
-  {id:"queue", label:"My queue", value:"8", hint:"assigned to you", icon:"work", queue:"mine"},
-  {id:"late", label:"Running late", value:"11", hint:"past their due date", icon:"health", queue:"overdue"},
+  {id:"queue", label:"My queue", value:"5", hint:"assigned to you", icon:"work", queue:"mine"},
+  {id:"late", label:"Running late", value:"2", hint:"past their due date", icon:"health", queue:"overdue"},
   {id:"unassigned", label:"Unassigned", value:"1", hint:"nobody owns it yet", icon:"teams", queue:"unassigned"},
   {id:"week", label:"Next 7 days", value:"4", hint:"due this week", icon:"visits", queue:"upcoming"}
 ];
 const PERSONALITIES = ["Straight-talking","Warm","Formal","Dry"];
 const ANSWER_STYLES = ["Short answers","Show the working","Ask before acting"];
-/* Every context source and every registered tool the agent could be granted —
-   the builder shows the whole catalogue, grouped, rather than a sample. */
+/* Every context source and every registered tool an agent could be granted. */
 const CONTEXT_DEFS = [
-  ["Organisations","records","Accounts, limits, payment behaviour"],
-  ["People","records","Contacts and internal staff"],
-  ["Files","records","Indexed documents and certificates"],
-  ["Tasks","work","Queues, owners, due dates"],
-  ["Site visits","work","Bookings, installers, outcomes"],
+  ["Candidates","records","Profiles, skills and verification"],
+  ["Employers","records","Accounts, tiers and engagement"],
+  ["Vacancies","records","Open roles and pipelines"],
+  ["Offers","work","Drafts, approvals and responses"],
+  ["Interviews","work","Bookings and panels"],
   ["Approvals","work","What is waiting on a decision"],
-  ["Invoices","money","Issued, paid, past due"],
-  ["Quotes","money","Sent, accepted, expired"],
-  ["Payments","money","Receipts and allocations"],
+  ["Memberships","money","Tiers, renewals and spend"],
+  ["Success fees","money","Placements and invoices"],
+  ["Partner shares","money","Referrals and enrolments"],
   ["Activity log","system","Every event, agent and human"],
-  ["Modules","system","What this client has installed"],
+  ["Courses","system","Partner courses and enrolments"],
   ["Insights","system","Saved metrics and trends"]
 ];
 const CONTEXT_SOURCES = CONTEXT_DEFS.map(c => c[0]);
 const SKILL_DEFS = [
-  ["Search records","read"],["Summarise activity","read"],["Read invoices","read"],
-  ["Read site visits","read"],["Check permissions","read"],
+  ["Search records","read"],["Summarise activity","read"],["Read profiles","read"],
+  ["Read vacancies","read"],["Check permissions","read"],
   ["Draft email","write"],["Create task","write"],["Update record","write"],
-  ["Schedule visit","write"],["Raise approval","write"],
-  ["Send email","external"],["Send WhatsApp","external"],["Post to Xero","external"],["Push to HubSpot","external"]
+  ["Suggest a pipeline addition","write"],["Raise approval","write"],
+  ["Send email","external"],["Request an issuer check","external"],["Book a calendar slot","external"],["Push to CRM","external"]
 ];
-/* The two questions the agent asks back once it knows the job. */
 const TRAIN_PHASES = [
-  ["Reading the whole ontology", "4,820 records"],
-  ["Learning how this business words things", "organisation → merchant"],
-  ["Researching the trade-supply domain", "12 sources"],
+  ["Reading the whole ontology", num(MARKET.registeredProfessionals) + " profiles"],
+  ["Learning how Recruit words things", "vacancy, not job"],
+  ["Researching the hospitality hiring market", "12 sources"],
   ["Writing its own system prompt", "1,240 tokens"]
 ];
+/* The two questions the agent asks back once it knows the job. */
 const BRIEF_QUESTIONS = [
-  {title:"What should it cover?", sub:"Pick as many as you like — we can refine later.",
-   options:[["Calendar","Meetings and what is coming up"],["Email","Unread and actionable inbox items"],
-            ["Records","Accounts that moved since yesterday"],["Money","Cash, overdue and anything at risk"],
+  {title:"What should it cover?", sub:"Pick as many as you like. You can refine it later.",
+   options:[["Vacancies","Roles that stopped moving"],["Candidates","Profiles and verification"],
+            ["Employers","Accounts, renewals and spend"],["Revenue","Fees, memberships and partner shares"],
             ["Something else","Tell me in the next message"]]},
   {title:"When should it land?", sub:"One is enough to start.",
-   options:[["Every morning 07:30","Before the yard opens"],["Weekdays 08:00","Monday to Friday only"],
+   options:[["Every morning 07:00","Before the first call"],["Weekdays 08:00","Monday to Friday only"],
             ["Only when something changes","Event-driven, no noise"],["On demand","When you ask for it"]]}
 ];
+
 /* The words under a name, keyed to the same state the face lights with. */
 const STATE_LABELS = {working:"working", thinking:"thinking", waiting:"waiting on you",
   complete:"up to date", attention:"needs you", idle:"idle"};
@@ -985,15 +1248,17 @@ const FACE_TINTS = [
 ];
 
 /* ---- ontology graph: generation, Dijkstra traversal, canvas render ---- */
+/* Recruit's eight record families. Same spread of angles and the same total
+   leaf count as before, so the graph keeps its shape and cost. */
 const CLUSTERS = [
-  ["Organisations", "#c8f04b", 0.00, 0.62, 46],
-  ["People",        "#6ad0f0", 0.90, 0.70, 52],
-  ["Files",         "#b06cf0", 1.75, 0.66, 58],
-  ["Tasks",         "#f0c04b", 2.55, 0.72, 44],
-  ["Invoices",      "#f0567f", 3.35, 0.60, 38],
-  ["Site visits",   "#5fe0a8", 4.15, 0.70, 40],
-  ["Locations",     "#f0803a", 4.95, 0.64, 30],
-  ["Approvals",     "#5f7cf0", 5.65, 0.72, 34]
+  ["Candidates",     "#7b93ff", 0.00, 0.62, 58],
+  ["Employers",      "#2dd4bf", 0.90, 0.70, 44],
+  ["Vacancies",      "#f0a33e", 1.75, 0.66, 46],
+  ["Skills",         "#c8b4f0", 2.55, 0.72, 52],
+  ["Qualifications", "#7fd0f0", 3.35, 0.60, 38],
+  ["Placements",     "#f07a9d", 4.15, 0.70, 34],
+  ["Courses",        "#a8e0c0", 4.95, 0.64, 30],
+  ["Offers",         "#e6c78a", 5.65, 0.72, 40]
 ];
 
 function mulberry(seed){
@@ -1183,6 +1448,7 @@ function buildGraph(){
   return {nodes, edges, adj, hubs, coreIds, bounds};
 }
 
+
 export {
   INK,
   BODY,
@@ -1216,14 +1482,15 @@ export {
   ADMIN_GROUPS,
   SRC_TINT,
   SRC_ABBR,
-  DATA_EVENTS,
-  PEOPLE_EVENTS,
-  AI_EVENTS,
+  HIRING_EVENTS,
+  PROFILE_EVENTS,
+  FINANCIAL_EVENTS,
   STREAM_DEFS,
   NAV,
   ITEMS,
   ORDER,
   ANSWERS,
+  SCRIPTED_QUESTIONS,
   synthesizeCustomArea,
   pickAnswer,
   ORGS,

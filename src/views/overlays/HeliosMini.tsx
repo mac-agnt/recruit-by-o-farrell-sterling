@@ -54,7 +54,7 @@ export default function HeliosMini({ v }: Props) {
                       {txt(v.miniGreeting)}
                     </div>
                     <div style={{"fontSize":"12.5px","color":"var(--dim)","marginTop":"6px","lineHeight":"1.5","textWrap":"pretty"}}>
-                      {"Reads what you can see. Ask about this page, or pick one of these."}
+                      {"Reads what you can see and answers from Recruit's demo data. Ask about this page, or pick one of these."}
                     </div>
                     <div style={{"display":"flex","flexDirection":"column","gap":"7px","marginTop":"14px"}}>
                       {arr(v.miniSuggestions).map((s: any, i117: number) => (
@@ -103,7 +103,7 @@ export default function HeliosMini({ v }: Props) {
                     <path d="M12 5v14 M5 12h14" />
                   </svg>
                 </button>
-                <input value={v.miniDraft ?? ""} onChange={v.setMiniDraft} onKeyDown={v.onMiniKey} placeholder="Ask your business anything" style={{"flex":"1","minWidth":"0","border":"0","outline":"0","background":"none","fontSize":"13.5px","color":"var(--ink)"}} />
+                <input value={v.miniDraft ?? ""} onChange={v.setMiniDraft} onKeyDown={v.onMiniKey} placeholder="Ask Recruit anything" style={{"flex":"1","minWidth":"0","border":"0","outline":"0","background":"none","fontSize":"13.5px","color":"var(--ink)"}} />
                 <button onClick={v.miniDictate} title="Dictate" style={css(v.miniMicStyle)}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z M6 11a6 6 0 0 0 12 0 M12 17v3" />

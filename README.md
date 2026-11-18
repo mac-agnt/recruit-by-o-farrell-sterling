@@ -1,57 +1,41 @@
-# Pulse — Harbour
+# Recruit by O'Farrell Sterling
 
-React build of the **Pulse v5 Harbour** design from Claude Design, the operations dashboard mocked up for Kilbride Group.
+A frontend demonstration of **Recruit**, a recruitment marketplace concept from John O'Farrell (O'Farrell Sterling Limited, Dublin), built on the Pulse v4/v5 Glass UI.
 
-Every page, theme and interaction from the design is here. Screens were checked against the original mockup and match pixel for pixel at 1440×900 and 1024×720.
+Everything is mock data in the browser. There is no backend, no authentication, no payments, no live AI and no external integration. All marketplace figures describe one illustrative future-state scenario, not actual results.
 
 ## Run it
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # type-check + production build into dist/
+npm run typecheck
+npm run build
 ```
 
-## What's in it
+## Four views, one shared state
 
-| Area | Where |
-| --- | --- |
-| Pages: Home (Helios chat), Agents, Dashboard, Work, Records, Activity, Settings | `src/views/pages/` |
-| Overlays: ⌘K palette, agent studio, Helios mini chat, work viewer, new record, background gallery | `src/views/overlays/` |
-| App frame: sidebar, top bar, notifications | `src/views/AppShell.tsx` |
-| State and behaviour | `src/logic/PulseLogic.js` |
-| Demo data (Kilbride Group) | `src/logic/data.js` |
-| Agent avatar | `src/components/AgentFace.tsx` |
-| Theme tokens (Harbour, light and 11 more), animations | `src/styles/pulse.css` |
+Switch views with the **Demo view** control at the top of the side rail.
+
+| View | Who it is for | Where |
+| --- | --- | --- |
+| Discover Recruit | Investors, partners, first-time visitors | `src/recruit/pages/pub/` |
+| Candidate | Aoife Byrne, Mark Doyle or Sarah Kavanagh (persona picker in the rail) | `src/recruit/pages/cand/` |
+| Employer | Harbourview Grand Hotel (Rachel Moran, HR Director) | `src/recruit/pages/emp/` |
+| Recruit HQ | John O'Farrell and the founding team | Pulse pages in `src/views/pages/` plus `src/recruit/pages/hq/` |
+
+The **DEMO** marker at the bottom left opens the presenter guide: eight scenes in the sales-demo order, each of which opens the right view and sets up its story. It also resets the demo data.
 
 ## How it fits together
 
-- **`PulseLogic`** holds all state. Its `renderVals()` returns one flat object `v`.
-- **Views** are plain React components that render from `v`.
-- **`LogicHost`** (`src/runtime/logic.tsx`) mounts the logic and re-renders on `setState`.
-- **Backgrounds** live in `src/App.tsx`:
-  - `dashboardBackdrop`: the colour of the Dashboard KPI background
-  - `kpiBackdropOn`: whether that background shows
-  - `recordsBackdrop`: the colour of the Records wash (`""` uses the theme gradient)
-- **Customising for a client:** read `CLAUDE.md` first. It lists the layout rules every copy keeps.
+- `src/recruit/data/` holds every fixture with stable ids (candidates, employers, vacancies, pipelines, offers, placements, courses, partners, agents, HQ). Marketplace totals live in `data/metrics.ts`.
+- `src/recruit/store.ts` is the one shared store. Actions (shortlist, request an introduction, schedule an interview, create and approve an offer, accept an offer, apply, enrol, change visibility, switch membership) update every view at once and write to the activity log. State persists in this browser's localStorage only.
+- `src/recruit/selectors.ts` and `src/recruit/match.ts` derive views and explainable match scores. Scores are decision support; nothing is rejected automatically.
+- `src/recruit/nav.tsx` defines each view's side rail and top-bar tabs. `src/logic/PulseLogic.js` owns navigation state and keeps the Pulse locked layout (Home first, Agents under Home; Records opens on Ontology).
+- `src/recruit/ui.tsx` and `src/recruit/charts.tsx` are the UI kit, built only from the Pulse theme tokens. The `recruit` theme lives in `src/styles/pulse.css`.
 
-## Updating from Claude Design
+Read `CLAUDE.md` before customising: it lists the layout rules every copy keeps.
 
-Export the new version, replace the file in `design/`, then run:
+## Do not re-import from Claude Design
 
-```bash
-npm run import-design
-```
-
-This regenerates:
-
-- `src/views/`
-- `src/styles/pulse.css`
-- `src/styles/interactions.css`
-- `src/logic/`
-
-`AgentFace` is hand-written and left alone. Commit before running, because it overwrites hand edits to those files.
-
-## Fixed from the mockup
-
-In the mockup, the work viewer's wrapper `<div>` was never closed. As a result, the ⌘K palette, agent studio, new record dialog and background gallery could only appear while the work viewer was open. They now open on their own. The fix is applied in `tools/import-design.mjs`.
+`npm run import-design` regenerates `src/views/`, `src/styles/pulse.css`, `src/styles/interactions.css` and `src/logic/`, which would wipe the Recruit customisation.

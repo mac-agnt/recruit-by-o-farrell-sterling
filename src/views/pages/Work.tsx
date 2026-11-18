@@ -204,17 +204,24 @@ export default function Work({ v }: Props) {
               <div style={{"width":"1px","height":"24px","background":"var(--border)"}} />
               {arr(v.work?.filters).map((c: any, i27: number) => (
                 <Fragment key={i27}>
-                  <button className="ixg" style={{"height":"32px","display":"flex","alignItems":"center","gap":"7px","padding":"0 14px","background":"var(--surface)","border":"1px solid var(--border)","borderRadius":"var(--r-ctl,9px)","fontSize":"12.5px","color":"var(--body)","cursor":"pointer","transition":"border-color .2s var(--ease),transform .18s var(--ease)"}}>
-                    {txt(c)}
+                  <button className="ixg" onClick={c?.pick} title="Click to change" style={css(cat("height:32px;display:flex;align-items:center;gap:7px;padding:0 14px;border-radius:var(--r-ctl,9px);font-size:12.5px;cursor:pointer;transition:border-color .2s var(--ease),transform .18s var(--ease);", c?.active ? "background:var(--accent-faint);border:1px solid var(--accent-line);color:var(--ink)" : "background:var(--surface);border:1px solid var(--border);color:var(--body)"))}>
+                    {txt(c?.label)}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{"flex":"none","opacity":".5"}}>
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
                   </button>
                 </Fragment>
               ))}
-              <button className="ixu" onClick={v.toggleFilterMenu} style={{"height":"32px","display":"flex","alignItems":"center","gap":"7px","padding":"0 13px","background":"none","border":"1px dashed var(--border-strong)","borderRadius":"var(--r-ctl,9px)","fontSize":"12.5px","color":"var(--dim)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 5v14 M5 12h14" />
-                </svg>
-                {"Filter"}
-              </button>
+              {v.work?.hasFilterButton && (
+                <>
+                  <button className="ixu" onClick={v.work?.clearFilters} style={{"height":"32px","display":"flex","alignItems":"center","gap":"7px","padding":"0 13px","background":"none","border":"1px dashed var(--border-strong)","borderRadius":"var(--r-ctl,9px)","fontSize":"12.5px","color":"var(--dim)","cursor":"pointer","transition":"border-color .2s var(--ease),color .2s var(--ease)"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M6 6l12 12 M18 6 6 18" />
+                    </svg>
+                    {"Clear filters"}
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}
@@ -296,7 +303,7 @@ export default function Work({ v }: Props) {
                       {"Nothing in this view"}
                     </div>
                     <div style={{"fontSize":"12.5px","color":"var(--dim)","marginTop":"5px"}}>
-                      {"Add a task above, or switch view."}
+                      {"Add a task above, switch view, or clear the filters."}
                     </div>
                   </div>
                 </>
@@ -355,7 +362,7 @@ export default function Work({ v }: Props) {
                           <button className="ixp" onClick={a?.approve} style={{"height":"30px","padding":"0 14px","border":"0","borderRadius":"var(--cta-r,9px)","background":"var(--accent-fill,var(--accent))","color":"var(--on-accent)","boxShadow":"var(--accent-glow,none)","fontSize":"12.5px","fontWeight":"500","cursor":"pointer","transition":"background .2s var(--ease),transform .18s var(--ease)"}}>
                             {"Approve"}
                           </button>
-                          <button className="ixz" onClick={a?.approve} style={{"height":"30px","padding":"0 13px","border":"1px solid var(--border)","background":"none","borderRadius":"var(--r-ctl,9px)","fontSize":"12.5px","color":"var(--ink)","cursor":"pointer","transition":"border-color .2s var(--ease)"}}>
+                          <button className="ixz" onClick={a?.decline} style={{"height":"30px","padding":"0 13px","border":"1px solid var(--border)","background":"none","borderRadius":"var(--r-ctl,9px)","fontSize":"12.5px","color":"var(--ink)","cursor":"pointer","transition":"border-color .2s var(--ease)"}}>
                             {"Decline"}
                           </button>
                         </>
@@ -483,7 +490,7 @@ export default function Work({ v }: Props) {
                       {"Nothing matches that filter"}
                     </div>
                     <div style={{"fontSize":"12.5px","color":"var(--dim)","marginTop":"5px"}}>
-                      {"Clear it to see everything Pulse runs on its own."}
+                      {"Clear it to see everything Recruit runs on its own."}
                     </div>
                   </div>
                 </>
